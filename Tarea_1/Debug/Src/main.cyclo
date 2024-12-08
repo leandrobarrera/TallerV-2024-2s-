@@ -1,0 +1,7 @@
+../Src/main.c:31:5:main	1
+../Src/main.c:54:10:checkRotation	4
+../Src/main.c:68:9:getTemperature	3
+../Src/main.c:80:9:leaking	2
+../Src/main.c:95:9:positiveFunction	2
+../Src/main.c:104:9:weirdFunction	2
+../Src/main.c:114:5:dostuff	1
