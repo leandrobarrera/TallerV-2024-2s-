@@ -1,3 +1,0 @@
-../Src/magic.c:12:6:configMagic	24	static,ignoring_inline_asm
-../Src/magic.c:57:5:__io_putchar	16	static,ignoring_inline_asm
-../Src/magic.c:66:5:__io_getchar	16	static,ignoring_inline_asm
