@@ -1,0 +1,12 @@
+../Src/oled_driver.c:22:6:sendDataBytes	24	static
+../Src/oled_driver.c:49:6:sendCommandByte	16	static
+../Src/oled_driver.c:68:6:startOLED	16	static
+../Src/oled_driver.c:107:6:stopOLED	16	static
+../Src/oled_driver.c:117:6:clearDisplay	152	static
+../Src/oled_driver.c:131:6:setPage	16	static
+../Src/oled_driver.c:138:6:setColumnAddress	16	static
+../Src/oled_driver.c:146:6:fillDisplayWithPattern	152	static
+../Src/oled_driver.c:160:6:toggleDisplay	16	static
+../Src/oled_driver.c:170:7:letterTochar	16	static,ignoring_inline_asm
+../Src/oled_driver.c:695:6:drawMSG	136	dynamic
+../Src/oled_driver.c:820:6:drawSinglePageMSG	80	dynamic

@@ -1,0 +1,5 @@
+/home/leandro/STM32CubeIDE/workspace_1.10.1/CMSIS-repo/STM32Cube_FW_F4_V1.27.0/Drivers/CMSIS/Include/core_cm4.h:1688:22:__NVIC_EnableIRQ	2
+../Src/systick_driver_hal.c:17:6:config_SysTick_ms	5
+../Src/systick_driver_hal.c:54:10:getTicks_ms	1
+../Src/systick_driver_hal.c:59:6:systick_Delay_ms	2
+../Src/systick_driver_hal.c:71:6:SysTick_Handler	2

@@ -1,0 +1,9 @@
+../Src/pwm_driver_hal.c:14:6:pwm_Config	12
+../Src/pwm_driver_hal.c:124:6:pwm_Start_Signal	1
+../Src/pwm_driver_hal.c:131:6:pwm_Stop_Signal	1
+../Src/pwm_driver_hal.c:136:6:pwm_Enable_Output	5
+../Src/pwm_driver_hal.c:170:6:pwm_Disable_Output	5
+../Src/pwm_driver_hal.c:207:6:pwm_Set_Frequency	1
+../Src/pwm_driver_hal.c:220:6:pwm_Update_Frequency	1
+../Src/pwm_driver_hal.c:229:6:pwm_Set_DuttyCycle	5
+../Src/pwm_driver_hal.c:262:6:pwm_Update_DuttyCycle	1
