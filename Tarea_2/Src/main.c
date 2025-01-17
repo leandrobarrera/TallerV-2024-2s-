@@ -155,7 +155,7 @@ int main(void)
 		// switch case para navegar entre modoos
 		switch(modo){
 			//en el modo 0, ejecutamos las indicaciones escritas en la tarea, todas comparten la config. del led RGB, otros comparten configs. de USART, y ADC.
-			case modo_0:{
+			case apagado:{
 				gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedGreen, 0);
 				gpio_WritePin(&LedBlue, 0);
@@ -307,7 +307,7 @@ void init_system(void){
 
 	/*	LedA	*/
 	LedA.pGPIOx 						= 	GPIOC;
-	LedA.pinConfig.GPIO_PinNumber		=	PIN_8;
+	LedA.pinConfig.GPIO_PinNumber		=	PIN_13;
 	LedA.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedA.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedA.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -316,9 +316,10 @@ void init_system(void){
 	gpio_Config(&LedA);
 
 
+
 	/*	LedB	*/
-	LedB.pGPIOx 						= 	GPIOB;
-	LedB.pinConfig.GPIO_PinNumber		=	PIN_8;
+	LedB.pGPIOx 						= 	GPIOC;
+	LedB.pinConfig.GPIO_PinNumber		=	PIN_12;
 	LedB.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedB.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedB.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -327,8 +328,8 @@ void init_system(void){
 	gpio_Config(&LedB);
 
 	/*	LedC*/
-	LedC.pGPIOx 						= 	GPIOD;
-	LedC.pinConfig.GPIO_PinNumber		=	PIN_2;
+	LedC.pGPIOx 						= 	GPIOB;
+	LedC.pinConfig.GPIO_PinNumber		=	PIN_13;
 	LedC.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -337,8 +338,8 @@ void init_system(void){
 	gpio_Config(&LedC);
 
 	/*	LedD*/
-	LedD.pGPIOx 						= 	GPIOC;
-	LedD.pinConfig.GPIO_PinNumber		=	PIN_10;
+	LedD.pGPIOx 						= 	GPIOB;
+	LedD.pinConfig.GPIO_PinNumber		=	PIN_5;
 	LedD.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedD.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedD.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -347,8 +348,8 @@ void init_system(void){
 	gpio_Config(&LedD);
 
 	/*	LedE*/
-	LedE.pGPIOx 						= 	GPIOC;
-	LedE.pinConfig.GPIO_PinNumber		=	PIN_11;
+	LedE.pGPIOx 						= 	GPIOB;
+	LedE.pinConfig.GPIO_PinNumber		=	PIN_10;
 	LedE.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedE.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedE.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -357,8 +358,8 @@ void init_system(void){
 	gpio_Config(&LedE);
 
 	/*	LedF*/
-	LedF.pGPIOx 						= 	GPIOC;
-	LedF.pinConfig.GPIO_PinNumber		=	PIN_9;
+	LedF.pGPIOx 						= 	GPIOB;
+	LedF.pinConfig.GPIO_PinNumber		=	PIN_7;
 	LedF.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedF.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedF.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -367,8 +368,8 @@ void init_system(void){
 	gpio_Config(&LedF);
 
 	/*	LedG*/
-	LedG.pGPIOx 						= 	GPIOC;
-	LedG.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedG.pGPIOx 						= 	GPIOB;
+	LedG.pinConfig.GPIO_PinNumber		=	PIN_14;
 	LedG.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedG.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedG.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -379,8 +380,8 @@ void init_system(void){
 	//la variable switcheo se convirtio en switcheoD (derecho) y switcheoI (izquierdo), ya que cambiamos la configuracion de los transistores, ya no estan mas en base comun.
 
 	/*	switcheoUnidades */
-	switcheoUnidades.pGPIOx 						= 	GPIOB;
-	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_7;
+	switcheoUnidades.pGPIOx 						= 	GPIOC;
+	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_1;
 	switcheoUnidades.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoUnidades.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoUnidades.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -390,7 +391,7 @@ void init_system(void){
 
 	/*	switcheoDecenas */
 	switcheoDecenas.pGPIOx 							= 	GPIOC;
-	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_13;
+	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_2;
 	switcheoDecenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoDecenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoDecenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -399,8 +400,8 @@ void init_system(void){
 	gpio_Config(&switcheoDecenas);
 
 	/*	switcheoCentenas */
-	switcheoCentenas.pGPIOx 						= 	GPIOA;
-	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_9;
+	switcheoCentenas.pGPIOx 						= 	GPIOC;
+	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_3;
 	switcheoCentenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoCentenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoCentenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -410,7 +411,7 @@ void init_system(void){
 
 	/*	switcheoMillares */
 	switcheoMillares.pGPIOx 						= 	GPIOC;
-	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_7;
+	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_4;
 	switcheoMillares.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoMillares.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoMillares.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -702,7 +703,7 @@ void switcheo_transistor (uint8_t choose){
 }
 
 
-//funcion para separar el numero, asi recibimos las unidades, decenas, centenas y millares del numero que nos arroje las lecturas de ADC, etc.
+//funcion para separar el numero, asi recibimos las unidades, decenas, centenas y millares del numero que nos arroje las lecturas del conteo, etc.
 void separador_numero (uint16_t valor){
 
 	uint16_t numero = 0;

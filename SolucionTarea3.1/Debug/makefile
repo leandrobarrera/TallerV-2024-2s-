@@ -59,8 +59,8 @@ all: main-build
 main-build: SolucionTarea3.1.elf secondary-outputs
 
 # Tool invocations
-SolucionTarea3.1.elf SolucionTarea3.1.map: $(OBJS) $(USER_OBJS) /home/leandro/Documentos/GitHub/TallerV-2024-1s/SolucionTarea3.1/STM32F411RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "SolucionTarea3.1.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/leandro/Documentos/GitHub/TallerV-2024-1s/SolucionTarea3.1/STM32F411RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SolucionTarea3.1.map" -Wl,--gc-sections -static -L"/home/leandro/Documentos/GitHub/TallerV-2024-1s/PeripheralsDrivers/Debug" --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+SolucionTarea3.1.elf SolucionTarea3.1.map: $(OBJS) $(USER_OBJS) /home/leandro/Documentos/GitHub/TallerV-2024-2s-/SolucionTarea3.1/STM32F411RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "SolucionTarea3.1.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/leandro/Documentos/GitHub/TallerV-2024-2s-/SolucionTarea3.1/STM32F411RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="SolucionTarea3.1.map" -Wl,--gc-sections -static -L"/home/leandro/Documentos/GitHub/TallerV-2024-2s-/PeripheralsDrivers/Debug" --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
