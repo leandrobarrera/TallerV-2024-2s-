@@ -128,7 +128,8 @@ void init_system(void);
 void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
-
+void giro (void);
+void refresh (void);
 int main(void)
 {
 	init_system();
@@ -136,147 +137,69 @@ int main(void)
 
 
 	while(1){
-
-
-		pinClockc = gpio_ReadPin(&pinClock);
-
-		//se usa la bandera para que cuando presionemos m se muestre el mensaje escrito.
-
-
-
-		//changeModo es la variableque usamos para navegar a traves de los modos, y modos es el contador dentro de la misma. Establecemos un maximo de 6 modos para que el contador no siga sumando hasta modo infinito.
-		if(changeModo){
-			modo++;
-			if(modo==8){
-				modo = 0;
-			}
-			changeModo = 0;
+		if(flag_clock){
+			giro();
+			refresh();
+			flag_clock = 0;
 		}
-		// switch case para navegar entre modoos
-		switch(modo){
-			//en el modo 0, ejecutamos las indicaciones escritas en la tarea, todas comparten la config. del led RGB, otros comparten configs. de USART, y ADC.
-			case apagado:{
-				gpio_WritePin(&LedRed, 0);
+		if(display_flag){
+			refresh();
+			display_flag = 0;
+		}
+		if(changeModo){
+			changeModo = 0;
+
+			switch(modo){
+			case 0:
 				gpio_WritePin(&LedGreen, 0);
-				gpio_WritePin(&LedBlue, 0);
-
-
-				break;
-			}
-			case modo_1:{
-					gpio_WritePin(&LedRed, 1);
-					gpio_WritePin(&LedGreen, 0);
-					gpio_WritePin(&LedBlue, 0);
-
-
-
-				break;
-			}
-
-			//configs iniciales de siempre para encender el 7segmentos y LED RGB.
-			case modo_2:{
 				gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedBlue, 0);
-
-
+				modo ++;
 				break;
-			}
-			//para el caso 3 es muy similar al del trimmer solo que usamos los datos que corresponde a fotoresistencia.
-			case modo_3:{
-				gpio_WritePin(&LedRed, 0);
+			case 1:
 				gpio_WritePin(&LedGreen, 0);
-				gpio_WritePin(&LedBlue, 1);
-
-
-
-			break;
-
-			}
-			//al principio creamos la funcion de contador para que cuando llegue a 4096 se reinicie.
-			case modo_4:{
-				if(flag_conteo){
-					contador ++;
-					if(contador == 4096){
-						contador = 0;
-					}
-					//bajamos la bandera para que no siga contando mientras no estamos en este modo.
-					flag_conteo = 0;
-				}
-				gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedGreen, 1);
-				gpio_WritePin(&LedBlue, 1);
-				//recordar, siete segmentos muestra la variable contador.
-				siete_segmentos = contador;
-				separador_numero(siete_segmentos);
-
-				if (display_flag){
-					switch(caso_transistor){
-						case 0:{
-							switcheo_transistor(caso_transistor);
-							caso_transistor ++;
-							break;
-						}
-						case 1:{
-							switcheo_transistor(caso_transistor);
-							caso_transistor ++;
-							break;
-						}
-						case 2:{
-							switcheo_transistor(caso_transistor);
-							caso_transistor ++;
-							break;
-						}
-						case 3:{
-							switcheo_transistor(caso_transistor);
-							caso_transistor = 0;
-							break;
-						}
-
-					}
-
-
-					display_flag = 0;
-				}
-
-
-
-				break;
-			}
-			case modo_5:{
-
-
-
 				gpio_WritePin(&LedRed, 1);
-				gpio_WritePin(&LedGreen, 0);
-				gpio_WritePin(&LedBlue, 1);
-
-				break;
-			}
-			case modo_6:{
-
-
-
-				gpio_WritePin(&LedRed, 1);
-				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedBlue, 0);
-
-
+				modo ++;
 
 				break;
-			}
-			case modo_7:{
-
-
-
-				gpio_WritePin(&LedRed, 1);
+			case 2:
 				gpio_WritePin(&LedGreen, 1);
+				gpio_WritePin(&LedRed, 0);
+				gpio_WritePin(&LedBlue, 0);
+				modo ++;
+				break;
+			case 3:
+				gpio_WritePin(&LedGreen, 0);
+				gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 1);
-
+				modo ++;
+				break;
+			case 4:
+				gpio_WritePin(&LedGreen, 1);
+				gpio_WritePin(&LedRed, 0);
+				gpio_WritePin(&LedBlue, 1);
+				modo ++;
+				break;
+			case 5:
+				gpio_WritePin(&LedGreen, 0);
+				gpio_WritePin(&LedRed, 1);
+				gpio_WritePin(&LedBlue, 1);
+				modo ++;
+				break;
+			case 6:
+				gpio_WritePin(&LedGreen, 1);
+				gpio_WritePin(&LedRed, 1);
+				gpio_WritePin(&LedBlue, 0);
+				modo ++;
+				break;
+			case 7:
+				gpio_WritePin(&LedGreen, 1);
+				gpio_WritePin(&LedRed, 1);
+				gpio_WritePin(&LedBlue, 1);
+				modo = 0;
 				break;
 			}
-
-
 
 		}
 
@@ -285,8 +208,8 @@ int main(void)
 
 void init_system(void){
 	/*	Configuramos el pin*/
-	userLed.pGPIOx 							= 	GPIOA;
-	userLed.pinConfig.GPIO_PinNumber		=	PIN_5;
+	userLed.pGPIOx 							= 	GPIOH;
+	userLed.pinConfig.GPIO_PinNumber		=	PIN_0;
 	userLed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	userLed.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	userLed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -306,8 +229,8 @@ void init_system(void){
 	 */
 
 	/*	LedA	*/
-	LedA.pGPIOx 						= 	GPIOC;
-	LedA.pinConfig.GPIO_PinNumber		=	PIN_13;
+	LedA.pGPIOx 						= 	GPIOA;
+	LedA.pinConfig.GPIO_PinNumber		=	PIN_5;
 	LedA.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedA.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedA.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -318,8 +241,8 @@ void init_system(void){
 
 
 	/*	LedB	*/
-	LedB.pGPIOx 						= 	GPIOC;
-	LedB.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedB.pGPIOx 						= 	GPIOA;
+	LedB.pinConfig.GPIO_PinNumber		=	PIN_7;
 	LedB.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedB.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedB.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -328,8 +251,8 @@ void init_system(void){
 	gpio_Config(&LedB);
 
 	/*	LedC*/
-	LedC.pGPIOx 						= 	GPIOB;
-	LedC.pinConfig.GPIO_PinNumber		=	PIN_13;
+	LedC.pGPIOx 						= 	GPIOC;
+	LedC.pinConfig.GPIO_PinNumber		=	PIN_11;
 	LedC.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -338,8 +261,8 @@ void init_system(void){
 	gpio_Config(&LedC);
 
 	/*	LedD*/
-	LedD.pGPIOx 						= 	GPIOB;
-	LedD.pinConfig.GPIO_PinNumber		=	PIN_5;
+	LedD.pGPIOx 						= 	GPIOA;
+	LedD.pinConfig.GPIO_PinNumber		=	PIN_4;
 	LedD.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedD.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedD.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -348,8 +271,8 @@ void init_system(void){
 	gpio_Config(&LedD);
 
 	/*	LedE*/
-	LedE.pGPIOx 						= 	GPIOB;
-	LedE.pinConfig.GPIO_PinNumber		=	PIN_10;
+	LedE.pGPIOx 						= 	GPIOA;
+	LedE.pinConfig.GPIO_PinNumber		=	PIN_1;
 	LedE.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedE.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedE.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -358,8 +281,8 @@ void init_system(void){
 	gpio_Config(&LedE);
 
 	/*	LedF*/
-	LedF.pGPIOx 						= 	GPIOB;
-	LedF.pinConfig.GPIO_PinNumber		=	PIN_7;
+	LedF.pGPIOx 						= 	GPIOA;
+	LedF.pinConfig.GPIO_PinNumber		=	PIN_6;
 	LedF.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedF.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedF.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -368,8 +291,8 @@ void init_system(void){
 	gpio_Config(&LedF);
 
 	/*	LedG*/
-	LedG.pGPIOx 						= 	GPIOB;
-	LedG.pinConfig.GPIO_PinNumber		=	PIN_14;
+	LedG.pGPIOx 						= 	GPIOC;
+	LedG.pinConfig.GPIO_PinNumber		=	PIN_12;
 	LedG.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedG.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedG.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -381,7 +304,7 @@ void init_system(void){
 
 	/*	switcheoUnidades */
 	switcheoUnidades.pGPIOx 						= 	GPIOC;
-	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_1;
+	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_8;
 	switcheoUnidades.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoUnidades.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoUnidades.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -390,8 +313,8 @@ void init_system(void){
 	gpio_Config(&switcheoUnidades);
 
 	/*	switcheoDecenas */
-	switcheoDecenas.pGPIOx 							= 	GPIOC;
-	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_2;
+	switcheoDecenas.pGPIOx 							= 	GPIOB;
+	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_6;
 	switcheoDecenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoDecenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoDecenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -400,8 +323,8 @@ void init_system(void){
 	gpio_Config(&switcheoDecenas);
 
 	/*	switcheoCentenas */
-	switcheoCentenas.pGPIOx 						= 	GPIOC;
-	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_3;
+	switcheoCentenas.pGPIOx 						= 	GPIOA;
+	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_9;
 	switcheoCentenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoCentenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoCentenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -410,8 +333,8 @@ void init_system(void){
 	gpio_Config(&switcheoCentenas);
 
 	/*	switcheoMillares */
-	switcheoMillares.pGPIOx 						= 	GPIOC;
-	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_4;
+	switcheoMillares.pGPIOx 						= 	GPIOA;
+	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_8;
 	switcheoMillares.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoMillares.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoMillares.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -421,8 +344,8 @@ void init_system(void){
 
 
 	/*	LedRed*/
-	LedRed.pGPIOx 							= 	GPIOC;
-	LedRed.pinConfig.GPIO_PinNumber			=	PIN_5;
+	LedRed.pGPIOx 							= 	GPIOB;
+	LedRed.pinConfig.GPIO_PinNumber			=	PIN_8;
 	LedRed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedRed.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
 	LedRed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -432,8 +355,8 @@ void init_system(void){
 
 
 	/*	LedBlue*/
-	LedBlue.pGPIOx 							= 	GPIOC;
-	LedBlue.pinConfig.GPIO_PinNumber		=	PIN_6;
+	LedBlue.pGPIOx 							= 	GPIOB;
+	LedBlue.pinConfig.GPIO_PinNumber		=	PIN_9;
 	LedBlue.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedBlue.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedBlue.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -442,7 +365,7 @@ void init_system(void){
 	gpio_Config(&LedBlue);
 
 	/*	LedGreen*/
-	LedGreen.pGPIOx 						= 	GPIOB;
+	LedGreen.pGPIOx 						= 	GPIOC;
 	LedGreen.pinConfig.GPIO_PinNumber		=	PIN_9;
 	LedGreen.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedGreen.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
@@ -454,8 +377,8 @@ void init_system(void){
 	//GPIOS del exti, recordar que se usan en modo input.
 
 	/*	GPIO del pinSW */
-	pinSW.pGPIOx 							= 	GPIOB;
-	pinSW.pinConfig.GPIO_PinNumber			=	PIN_5;
+	pinSW.pGPIOx 							= 	GPIOC;
+	pinSW.pinConfig.GPIO_PinNumber			=	PIN_2;
 	pinSW.pinConfig.GPIO_PinMode			=	GPIO_MODE_IN;
 
 	gpio_Config(&pinSW);
@@ -466,8 +389,8 @@ void init_system(void){
 	exti_Config(&extiSW);
 
 	/*	GPIO del pinData. No necesita todas las configs de pinClock o pinSW. */
-	pinData.pGPIOx 							= 	GPIOB;
-	pinData.pinConfig.GPIO_PinNumber		=	PIN_3;
+	pinData.pGPIOx 							= 	GPIOC;
+	pinData.pinConfig.GPIO_PinNumber		=	PIN_1;
 	pinData.pinConfig.GPIO_PinMode			=	GPIO_MODE_IN;
 
 	gpio_Config(&pinData);
@@ -668,35 +591,35 @@ void display_numbers (uint8_t valor){
 void switcheo_transistor (uint8_t choose){
 	switch(choose){
 	case 0:{
-		gpio_WritePin(&switcheoCentenas,1);
-		gpio_WritePin(&switcheoDecenas,1);
-		gpio_WritePin(&switcheoMillares,1);
+		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoMillares,0);
 		display_numbers(unidades);
-		gpio_WritePin(&switcheoUnidades,0);
+		gpio_WritePin(&switcheoUnidades,1);
 		break;
 		}
 	case 1:{
-		gpio_WritePin(&switcheoCentenas,1);
-		gpio_WritePin(&switcheoMillares,1);
-		gpio_WritePin(&switcheoUnidades,1);
+		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoMillares,0);
+		gpio_WritePin(&switcheoUnidades,0);
 		display_numbers(decenas);
-		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoDecenas,1);
 		break;
 		}
 	case 2:{
-		gpio_WritePin(&switcheoUnidades,1);
-		gpio_WritePin(&switcheoDecenas,1);
-		gpio_WritePin(&switcheoMillares,1);
+		gpio_WritePin(&switcheoUnidades,0);
+		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoMillares,0);
 		display_numbers(centenas);
-		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoCentenas,1);
 		break;
 		}
 	case 3:{
-		gpio_WritePin(&switcheoCentenas,1);
-		gpio_WritePin(&switcheoDecenas,1);
-		gpio_WritePin(&switcheoUnidades,1);
+		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoUnidades,0);
 		display_numbers(millares);
-		gpio_WritePin(&switcheoMillares,0);
+		gpio_WritePin(&switcheoMillares,1);
 		break;
 		}
 	}
@@ -725,6 +648,50 @@ void separador_numero (uint16_t valor){
 
 
 
+}
+
+void giro (void){
+	if(exti_Data){
+		if(exti_conteo == 0){
+			exti_conteo = 4096;
+		}
+		exti_conteo--;
+	}
+	//se hicieorn correctamente los reinicios tanto si pasamos de 4095 a como si nos devolvemos desde 0.
+		else{
+			exti_conteo ++;
+			if(exti_conteo == 4096){
+				exti_conteo = 0;
+				}
+		}
+}
+
+void refresh (void){
+	siete_segmentos = exti_conteo;
+	separador_numero(siete_segmentos);
+		switch(caso_transistor){
+			case 0:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor ++;
+				break;
+			}
+			case 1:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor ++;
+				break;
+			}
+			case 2:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor ++;
+				break;
+			}
+			case 3:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor = 0;
+				break;
+			}
+
+		}
 }
 
 
@@ -765,7 +732,7 @@ void callback_ExtInt13(void){
 	exti_Data = gpio_ReadPin(&pinData);
 }
 
-void callback_ExtInt5(void){
+void callback_ExtInt2(void){
 	changeModo = 1;
 }
 
