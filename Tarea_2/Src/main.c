@@ -14,6 +14,7 @@
 #include "gpio_driver_hal.h"
 #include "timer_driver_hal.h"
 #include "exti_driver_hal.h"
+#include "systick_driver_hal.h"
 
 
 
@@ -49,7 +50,7 @@ uint16_t exti_conteo = 0; //contador del Encoder.
 uint8_t usart_data = 0; //el dato del usart2
 uint16_t promedio = 0;	//esta variable y la de abajo es una recomendacion, un arreglo para promediar datos, sirve para que no se actualicen los datos de una manera tosca y rapida haciendo dificil la lectura de los mismos, funciona pero podria ser mejor.
 uint8_t subdivisiones = 0;
-
+uint8_t flag_reset = 0;
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
 uint8_t unidades = 0;
@@ -79,13 +80,14 @@ GPIO_Handler_t pinData = {0}; //	PinB3
 GPIO_Handler_t pinClock = {0}; //	PinB13
 GPIO_Handler_t pinRX = {0}; //	PinA0
 GPIO_Handler_t pinTX = {0}; //	PinA0
+GPIO_Handler_t reset = {0}; //	Pines RGB	PinC5
 
 
 
 //Handlers EXTI
 EXTI_Config_t extiSW = {0};
 EXTI_Config_t extiClock = {0};
-
+EXTI_Config_t extiReset = {0};
 
 
 
@@ -133,6 +135,8 @@ void refresh (void);
 int main(void)
 {
 	init_system();
+	config_SysTick_ms(0);
+
 
 
 
@@ -149,54 +153,55 @@ int main(void)
 		if(changeModo){
 			changeModo = 0;
 
+
 			switch(modo){
 			case 0:
-				gpio_WritePin(&LedGreen, 0);
-				gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedBlue, 0);
-				modo ++;
-				break;
-			case 1:
 				gpio_WritePin(&LedGreen, 0);
 				gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 
 				break;
-			case 2:
+			case 1:
 				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 				break;
-			case 3:
+			case 2:
 				gpio_WritePin(&LedGreen, 0);
+				gpio_WritePin(&LedRed, 0);
+				gpio_WritePin(&LedBlue, 1);
+				modo ++;
+				break;
+			case 3:
+				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
 			case 4:
-				gpio_WritePin(&LedGreen, 1);
-				gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedBlue, 1);
-				modo ++;
-				break;
-			case 5:
 				gpio_WritePin(&LedGreen, 0);
 				gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
-			case 6:
+			case 5:
 				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 				break;
-			case 7:
+			case 6:
 				gpio_WritePin(&LedGreen, 1);
 				gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 1);
+				modo ++;
+				break;
+			case 7:
+				gpio_WritePin(&LedGreen, 0);
+				gpio_WritePin(&LedRed, 0);
+				gpio_WritePin(&LedBlue, 0);
 				modo = 0;
 				break;
 			}
@@ -208,8 +213,8 @@ int main(void)
 
 void init_system(void){
 	/*	Configuramos el pin*/
-	userLed.pGPIOx 							= 	GPIOH;
-	userLed.pinConfig.GPIO_PinNumber		=	PIN_0;
+	userLed.pGPIOx 							= 	GPIOC;
+	userLed.pinConfig.GPIO_PinNumber		=	PIN_6;
 	userLed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	userLed.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	userLed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -373,6 +378,9 @@ void init_system(void){
 	LedGreen.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
 
 	gpio_Config(&LedGreen);
+
+
+
 
 	//GPIOS del exti, recordar que se usan en modo input.
 
@@ -652,17 +660,22 @@ void separador_numero (uint16_t valor){
 
 void giro (void){
 	if(exti_Data){
-		if(exti_conteo == 0){
-			exti_conteo = 4096;
+
+		if(exti_conteo == 4096){
+			exti_conteo = 0;
+			}
+		else{
+			exti_conteo ++;
 		}
-		exti_conteo--;
 	}
 	//se hicieorn correctamente los reinicios tanto si pasamos de 4095 a como si nos devolvemos desde 0.
 		else{
-			exti_conteo ++;
-			if(exti_conteo == 4096){
-				exti_conteo = 0;
-				}
+			if(exti_conteo == 0){
+				exti_conteo = 4096;
+			}
+			else{
+				exti_conteo--;
+			}
 		}
 }
 

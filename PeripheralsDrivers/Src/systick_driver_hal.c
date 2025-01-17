@@ -51,7 +51,7 @@ void config_SysTick_ms(uint8_t systemClock){
 
 }
 
-uint64_t getTicks_ms(void){
+uint32_t getTicks_ms(void){
 	return ticks;
 
 }
