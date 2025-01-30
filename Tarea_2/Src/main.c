@@ -58,6 +58,7 @@ uint8_t decenas = 0;
 uint8_t centenas = 0;
 uint8_t millares = 0;
 uint8_t pinClockc = 0;
+uint32_t conteo_ms = 0;
 
 
 
@@ -102,6 +103,8 @@ Timer_Handler_t display = {0};
 
 
 
+
+
 //Banderas. Se crearon banderas para la corecta ejecucion y entendimiento de las interrupciones. (estas son de la tarea anterior)
 uint8_t display_flag = 0;
 uint8_t display_select = 0;
@@ -110,20 +113,6 @@ uint8_t display_select = 0;
 /*
  * The main function, where EVERYTHING HAPPENS. The magic happens...
  */
-
-
-//usamos un enum para pasar entre modos, escogimos los mismos nombres de la tarea
-enum{
-	apagado = 0,
-	modo_1,
-	modo_2,
-	modo_3,
-	modo_4,
-	modo_5,
-	modo_6,
-	modo_7
-};
-
 
 // se creo una funcion para inicializar el sistema, esto ayuda a desplazarnos mas rapido en el codigo.
 void init_system(void);
@@ -136,11 +125,15 @@ int main(void)
 {
 	init_system();
 	config_SysTick_ms(0);
-
+	configMagic();
 
 
 
 	while(1){
+
+
+
+
 		if(flag_clock){
 			giro();
 			refresh();
@@ -213,8 +206,8 @@ int main(void)
 
 void init_system(void){
 	/*	Configuramos el pin*/
-	userLed.pGPIOx 							= 	GPIOC;
-	userLed.pinConfig.GPIO_PinNumber		=	PIN_6;
+	userLed.pGPIOx 							= 	GPIOH;
+	userLed.pinConfig.GPIO_PinNumber		=	PIN_1;
 	userLed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	userLed.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	userLed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -234,8 +227,8 @@ void init_system(void){
 	 */
 
 	/*	LedA	*/
-	LedA.pGPIOx 						= 	GPIOA;
-	LedA.pinConfig.GPIO_PinNumber		=	PIN_5;
+	LedA.pGPIOx 						= 	GPIOB;
+	LedA.pinConfig.GPIO_PinNumber		=	PIN_12;
 	LedA.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedA.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedA.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -247,7 +240,7 @@ void init_system(void){
 
 	/*	LedB	*/
 	LedB.pGPIOx 						= 	GPIOA;
-	LedB.pinConfig.GPIO_PinNumber		=	PIN_7;
+	LedB.pinConfig.GPIO_PinNumber		=	PIN_12;
 	LedB.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedB.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedB.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -266,8 +259,8 @@ void init_system(void){
 	gpio_Config(&LedC);
 
 	/*	LedD*/
-	LedD.pGPIOx 						= 	GPIOA;
-	LedD.pinConfig.GPIO_PinNumber		=	PIN_4;
+	LedD.pGPIOx 						= 	GPIOC;
+	LedD.pinConfig.GPIO_PinNumber		=	PIN_10;
 	LedD.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedD.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedD.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -276,8 +269,8 @@ void init_system(void){
 	gpio_Config(&LedD);
 
 	/*	LedE*/
-	LedE.pGPIOx 						= 	GPIOA;
-	LedE.pinConfig.GPIO_PinNumber		=	PIN_1;
+	LedE.pGPIOx 						= 	GPIOC;
+	LedE.pinConfig.GPIO_PinNumber		=	PIN_12;
 	LedE.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedE.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedE.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -287,7 +280,7 @@ void init_system(void){
 
 	/*	LedF*/
 	LedF.pGPIOx 						= 	GPIOA;
-	LedF.pinConfig.GPIO_PinNumber		=	PIN_6;
+	LedF.pinConfig.GPIO_PinNumber		=	PIN_11;
 	LedF.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedF.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedF.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -296,8 +289,8 @@ void init_system(void){
 	gpio_Config(&LedF);
 
 	/*	LedG*/
-	LedG.pGPIOx 						= 	GPIOC;
-	LedG.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedG.pGPIOx 						= 	GPIOD;
+	LedG.pinConfig.GPIO_PinNumber		=	PIN_2;
 	LedG.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedG.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedG.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -308,8 +301,8 @@ void init_system(void){
 	//la variable switcheo se convirtio en switcheoD (derecho) y switcheoI (izquierdo), ya que cambiamos la configuracion de los transistores, ya no estan mas en base comun.
 
 	/*	switcheoUnidades */
-	switcheoUnidades.pGPIOx 						= 	GPIOC;
-	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_8;
+	switcheoUnidades.pGPIOx 						= 	GPIOB;
+	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_7;
 	switcheoUnidades.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoUnidades.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoUnidades.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -318,8 +311,8 @@ void init_system(void){
 	gpio_Config(&switcheoUnidades);
 
 	/*	switcheoDecenas */
-	switcheoDecenas.pGPIOx 							= 	GPIOB;
-	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_6;
+	switcheoDecenas.pGPIOx 							= 	GPIOC;
+	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_9;
 	switcheoDecenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoDecenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoDecenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -328,8 +321,8 @@ void init_system(void){
 	gpio_Config(&switcheoDecenas);
 
 	/*	switcheoCentenas */
-	switcheoCentenas.pGPIOx 						= 	GPIOA;
-	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_9;
+	switcheoCentenas.pGPIOx 						= 	GPIOC;
+	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_8;
 	switcheoCentenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoCentenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoCentenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -338,8 +331,8 @@ void init_system(void){
 	gpio_Config(&switcheoCentenas);
 
 	/*	switcheoMillares */
-	switcheoMillares.pGPIOx 						= 	GPIOA;
-	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_8;
+	switcheoMillares.pGPIOx 						= 	GPIOC;
+	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_5;
 	switcheoMillares.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	switcheoMillares.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	switcheoMillares.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -370,8 +363,8 @@ void init_system(void){
 	gpio_Config(&LedBlue);
 
 	/*	LedGreen*/
-	LedGreen.pGPIOx 						= 	GPIOC;
-	LedGreen.pinConfig.GPIO_PinNumber		=	PIN_9;
+	LedGreen.pGPIOx 						= 	GPIOA;
+	LedGreen.pinConfig.GPIO_PinNumber		=	PIN_5;
 	LedGreen.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	LedGreen.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	LedGreen.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
@@ -385,8 +378,8 @@ void init_system(void){
 	//GPIOS del exti, recordar que se usan en modo input.
 
 	/*	GPIO del pinSW */
-	pinSW.pGPIOx 							= 	GPIOC;
-	pinSW.pinConfig.GPIO_PinNumber			=	PIN_2;
+	pinSW.pGPIOx 							= 	GPIOA;
+	pinSW.pinConfig.GPIO_PinNumber			=	PIN_4;
 	pinSW.pinConfig.GPIO_PinMode			=	GPIO_MODE_IN;
 
 	gpio_Config(&pinSW);
@@ -397,15 +390,15 @@ void init_system(void){
 	exti_Config(&extiSW);
 
 	/*	GPIO del pinData. No necesita todas las configs de pinClock o pinSW. */
-	pinData.pGPIOx 							= 	GPIOC;
+	pinData.pGPIOx 							= 	GPIOA;
 	pinData.pinConfig.GPIO_PinNumber		=	PIN_1;
 	pinData.pinConfig.GPIO_PinMode			=	GPIO_MODE_IN;
 
 	gpio_Config(&pinData);
 
 	/*	GPIO del pinClock */
-	pinClock.pGPIOx 						= 	GPIOB;
-	pinClock.pinConfig.GPIO_PinNumber		=	PIN_13;
+	pinClock.pGPIOx 						= 	GPIOA;
+	pinClock.pinConfig.GPIO_PinNumber		=	PIN_0;
 	pinClock.pinConfig.GPIO_PinMode		=	GPIO_MODE_IN;
 
 	gpio_Config(&pinClock);
@@ -740,13 +733,14 @@ void Timer5_Callback(void){
 
 //Callbacks del EXTI.
 //subimos la bandera del clock, y leemos el dato que tenemos del encoder:exti_Data, y lo enviamos por pinData.
-void callback_ExtInt13(void){
+void callback_ExtInt0(void){
 	flag_clock = 1;
 	exti_Data = gpio_ReadPin(&pinData);
 }
 
-void callback_ExtInt2(void){
+void callback_ExtInt4(void){
 	changeModo = 1;
+	conteo_ms = getTicks_ms();
 }
 
 
