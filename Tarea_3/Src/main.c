@@ -328,7 +328,7 @@ void init_system(void){
 	gpio_WritePin(&LedGreen, 0);
 
 	/*	pinFiltroRC*/
-	/*pinfiltroRC.pGPIOx 							= 	GPIOB;
+	pinfiltroRC.pGPIOx 							= 	GPIOB;
 	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_10;
 	pinfiltroRC.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
 	pinfiltroRC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
@@ -338,7 +338,7 @@ void init_system(void){
 
 
 	gpio_Config(&pinfiltroRC);
-*/
+
 
 
 
@@ -878,7 +878,7 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-				dutty = (float) (firstParameter * 100) / vMax;
+				dutty = (float) (firstParameter * 1023) / vMax;
 				dutty = dutty * 10;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
