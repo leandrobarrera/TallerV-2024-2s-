@@ -31,6 +31,7 @@ GPIO_Handler_t LedD = {0}; 		//	PinC10
 GPIO_Handler_t LedE = {0};		//	PinC12
 GPIO_Handler_t LedF = {0};		//	PinA11
 GPIO_Handler_t LedG = {0}; 		//	PinD2
+GPIO_Handler_t pinfiltroRC = {0}; 		//	PinB10
 
 
 
@@ -67,8 +68,8 @@ char bufferData[64] = {0};
 char bufferReception[BUFFER_SIZE];
 char userMsg[BUFFER_SIZE] = {0};
 char cmd[16];
-unsigned int firstParameter;
-unsigned int secondParameter;
+uint32_t firstParameter;
+uint32_t secondParameter;
 uint8_t counterReception;
 
 
@@ -303,6 +304,7 @@ void init_system(void){
 	gpio_WritePin(&LedRed, 0);
 
 
+
 	/*	LedBlue*/
 	LedBlue.pGPIOx 							= 	GPIOB;
 	LedBlue.pinConfig.GPIO_PinNumber		=	PIN_9;
@@ -325,6 +327,18 @@ void init_system(void){
 	gpio_Config(&LedGreen);
 	gpio_WritePin(&LedGreen, 0);
 
+	/*	pinFiltroRC*/
+	/*pinfiltroRC.pGPIOx 							= 	GPIOB;
+	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_10;
+	pinfiltroRC.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
+	pinfiltroRC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	pinfiltroRC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	pinfiltroRC.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+	pinfiltroRC.pinConfig.GPIO_PinAltFunMode	= 	AF1;
+
+
+	gpio_Config(&pinfiltroRC);
+*/
 
 
 
@@ -411,20 +425,20 @@ void init_system(void){
 	red_pwm.ptrTIMx = TIM4;
 	red_pwm.config.channel = PWM_CHANNEL_3;
 	red_pwm.config.periodo = 200;
-	red_pwm.config.prescaler = 160; // freq
+	red_pwm.config.prescaler = 5; // freq 10us
 	red_pwm.config.duttyCicle = 100; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
 
 	/* Se carga el PWM con los parametros establecidos */
 	pwm_Config(&red_pwm);
-	pwm_Disable_Output(&red_pwm);
+	pwm_Enable_Output(&red_pwm);
 
-	pwm_Stop_Signal(&red_pwm);
+	pwm_Start_Signal(&red_pwm);
 
 
-	filtroRC.ptrTIMx = TIM1;
-	filtroRC.config.channel = PWM_CHANNEL_1;
+	filtroRC.ptrTIMx = TIM2;
+	filtroRC.config.channel = PWM_CHANNEL_3;
 	filtroRC.config.periodo = 200;
-	filtroRC.config.prescaler = 160; // freq
+	filtroRC.config.prescaler = 5; // freq
 	filtroRC.config.duttyCicle = 50; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
@@ -719,7 +733,7 @@ void analizeRecievedChar(void){
 
 		if (commSerial.receivedChar == '@'){
 			bufferReception[counterReception] = '\0';
-
+			counterReception = 0;
 			fsm_program.state = STATE_COMMAND_COMPLETE;
 		}
 	}
@@ -734,7 +748,7 @@ void parseCommands(char *ptrBufferReception){
     // y almacena en tres elementos diferentes: un string llamado "cmd" y dos numeros
     // integer llamados ""firstParameter" y "SecondParameter".
     // De esta forma, podemos introducir información al micro desde el puerto serial
-    sscanf(ptrBufferReception, "%s %u %u %s", cmd, &firstParameter, &secondParameter, userMsg);
+    sscanf(ptrBufferReception, "%s %lu %lu %s", cmd, &firstParameter, &secondParameter, userMsg);
 
     // Este primer comando imprime una lista con los otros comandos que tiene el equipo
     if (strcmp(cmd, "help") == 0){
@@ -742,7 +756,7 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "1) help            -- Print this menu\n");
         usart_writeMsg(&commSerial, "2) dummy #A #B    -- dummy cmd, #A and #B are uint32_t\n");
         usart_writeMsg(&commSerial, "3) usermsg # # msg -- msg is a string comming from outside\n");
-        usart_writeMsg(&commSerial, "4) serPeriod # -- Change the Led_state period (ms)n");
+        usart_writeMsg(&commSerial, "4) setPeriod # -- Change the Led_state period (ms)n");
         usart_writeMsg(&commSerial, "5) setDuty # -- Change the duty cycle (%)\n");
         usart_writeMsg(&commSerial, "6) setDisplay # -- Change displayed number\n");
         usart_writeMsg(&commSerial, "7) setVolt # -- PWM-DAC output in mV\n");
@@ -753,11 +767,11 @@ void parseCommands(char *ptrBufferReception){
     else if (strcmp(cmd, "dummy") == 0){
         usart_writeMsg(&commSerial, "CMD: dummy\n");
         // Cambiando el formato para presentar el número por el puerto serial
-        sprintf(bufferData, "number A = %u \n", firstParameter);
+        sprintf(bufferData, "number A = %lu \n", firstParameter);
         usart_writeMsg(&commSerial, bufferData);
 
         // Cambiando el formato para presentar el número por el puerto serial
-        sprintf(bufferData, "number B = %u \n", secondParameter);
+        sprintf(bufferData, "number B = %lu \n", secondParameter);
         usart_writeMsg(&commSerial, bufferData);
     }
 
@@ -769,113 +783,138 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "\n");
     }
 
-    else{
-        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
-        usart_writeMsg(&commSerial, "Wrong CMD\n");
-    }
+    else if (strcmp(cmd, "setPeriod")	== 0){
+		usart_writeMsg(&commSerial, "cmd: setPeriod\n");
+		sprintf(bufferData, "El periodo para el blinky será de: %lu ms\n", firstParameter);
+		usart_writeMsg(&commSerial, bufferData);
+			if (firstParameter>=100 && firstParameter<=1500){
+				timer_SetState(&blinkyTimer, RESET);
+				blinkyTimer.TIMx_Config.TIMx_Period = firstParameter;
+				timer_Config(&blinkyTimer);
+				timer_SetState(&blinkyTimer, SET);
+			}
 
-    	if (strcmp(cmd, "setBlinkyPeriod")	== 0){
-    		usart_writeMsg(&commSerial, "cmd: setBlinkyPeriod\n");
-    		sprintf(bufferData, "El periodo para el blinky será de: %u ms\n", firstParameter);
-    		usart_writeMsg(&commSerial, bufferData);
-    }
-    		if (firstParameter>=100 && firstParameter<=1500){
-    			pwm_Update_Frequency(&blinkyTimer, firstParameter);
-    		}
-    		else {
-    			usart_writeMsg(&commSerial, "Ponga un número entre 100 y 1500 ms.\n");
-    		}
+			else {
+			usart_writeMsg(&commSerial, "Ponga un número entre 100 y 1500 ms.\n");
+			}
+		}
 
-    	if (strcmp(cmd, "setNumber")==0){
-			usart_writeMsg(&commSerial, "cmd: setNumber\n");
-			sprintf(bufferData, "Número que se verá en el display = %u\n",firstParameter);
-			usart_writeMsg(&commSerial, bufferData);
 
+    else if (strcmp(cmd, "setNumber")==0){
+		usart_writeMsg(&commSerial, "cmd: setNumber\n");
+		sprintf(bufferData, "Número que se verá en el display = %lu\n",firstParameter);
+		usart_writeMsg(&commSerial, bufferData);
 			if (firstParameter>4095) {
 				exti_conteo = 4095;
 				usart_writeMsg(&commSerial, "número por encima del máximo permitido, asignándole el valor max\n");
-			}
-			else if(firstParameter<=4095){
-				exti_conteo = firstParameter;
-			}
-			else{
-				usart_writeMsg(&commSerial, "Error, número fuera de rango (0-4095)");
-			}
-			fsm_program.state = STATE_REFRESH_DISPLAY;
-		}
-	else if (strcmp(cmd, "setPeriod")==0){
-			usart_writeMsg(&commSerial, "cmd: setPeriod\n");
+    			}
+    			else if(firstParameter<=4095){
+    				exti_conteo = firstParameter;
+    			}
+    			else{
+    				usart_writeMsg(&commSerial, "Error, número fuera de rango (0-4095)");
+    			}
+    			fsm_program.state = STATE_REFRESH_DISPLAY;
+    			}
+
+	else if (strcmp(cmd, "setFreq")==0){
+		usart_writeMsg(&commSerial, "cmd: setFreq\n");
 			if (firstParameter == 1){
-				sprintf(bufferData, "Valor del nuevo periodo en ms: %u\n", secondParameter);
+				sprintf(bufferData, "Valor del nuevo periodo en ms: %lu\n", secondParameter);
+				usart_writeMsg(&commSerial, bufferData);
+					if (secondParameter>0){
+						pwm_Update_Frequency(&red_pwm, secondParameter);
+						usart_writeMsg(&commSerial, "RGB Period updated\n");
+					}
+					else{
+						usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
+					}
+
+				}
+			else if (firstParameter == 2){
+				sprintf(bufferData, "Valor de la nueva freq^⁻1 en ms: %lu\n", secondParameter);
 				usart_writeMsg(&commSerial, bufferData);
 				if (secondParameter>0){
-					pwm_Update_Frequency(&red_pwm, secondParameter);
-					usart_writeMsg(&commSerial, "RGB Period updated\n");
+					pwm_Update_Frequency(&filtroRC, secondParameter);
+					usart_writeMsg(&commSerial, "Freq RC updated\n");
 				}
 				else{
 					usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
 				}
 			}
-	else if (firstParameter ==2){
-		sprintf(bufferData, "Valor del nuevo periodo en ms: %u\n", secondParameter);
-		usart_writeMsg(&commSerial, bufferData);
-			if (secondParameter>0){
-				pwm_Update_Frequency(&filtroRC, secondParameter);
-				usart_writeMsg(&commSerial, "RC Period updated\n");
-			}
-				else{
-					usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
-				}
-			}
-				else{
-					usart_writeMsg(&commSerial, "Elija 1 para cambiar el periodo del RGB o 2 para cambiar el del RC\n");
-				}
 	}
-	else if (strcmp(cmd, "setDuty")==0){
-		usart_writeMsg(&commSerial, "cmd: setDuty\n");
-		if (firstParameter == 1){
-			sprintf(bufferData, "Valor del nuevo duty: %u\n", secondParameter);
-			usart_writeMsg(&commSerial, bufferData);
-			if (secondParameter<=100 && secondParameter>=0){
-				pwm_Update_DuttyCycle(&red_pwm, secondParameter);
-				usart_writeMsg(&commSerial, "RGB duty cicle updated\n");
-			}
+
+
+	else if (strcmp(cmd, "setDutty")==0){
+		usart_writeMsg(&commSerial, "cmd: setDutty\n");
+			if (firstParameter == 1){
+				sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
+				usart_writeMsg(&commSerial, bufferData);
+					if (secondParameter>=0 && secondParameter<=100  ){
+						pwm_Update_DuttyCycle(&red_pwm, secondParameter);
+						usart_writeMsg(&commSerial, "RGB dutty cicle updated\n");
+				}
 			else{
-				usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
+				usart_writeMsg(&commSerial, "El valor del dutty debe estar entre 0-100 porciento \n");
 			}
 		}
+
 		else if (firstParameter ==2){
-			sprintf(bufferData, "Valor del nuevo duty: %u\n", secondParameter);
+			sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 			usart_writeMsg(&commSerial, bufferData);
-			if (secondParameter<=100 && secondParameter>=0 ){
-				pwm_Update_DuttyCycle(&filtroRC, secondParameter);
-				usart_writeMsg(&commSerial, "Duty cicle updated\n");
-			}
-			else{
-				usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
-			}
-		}
-		else{
-			usart_writeMsg(&commSerial, "Elija 1 para cambiar el duty del RGB o 2 para cambiar el del RC\n");
+				if (secondParameter<=100 && secondParameter>=0 ){
+					pwm_Update_DuttyCycle(&filtroRC, secondParameter);
+					usart_writeMsg(&commSerial, "Duty cicle updated\n");
+				}
+				else{
+					usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
+				}
+				}
+				else{
+					usart_writeMsg(&commSerial, "Elija 1 para cambiar el duty del RGB o 2 para cambiar el del RC\n");
+				}
 		}
 
-
-		}
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
 				dutty = (float) (firstParameter * 100) / vMax;
 				dutty = dutty * 10;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
-				sprintf(bufferData, "Voltage: %u mV\n", firstParameter);
+				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
 			}
 			else{
 				usart_writeMsg(&commSerial, "Error: voltaje debe estar entre 1 y 3300mv");
 			}
 		}
+	 else{
+	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
+	        usart_writeMsg(&commSerial, "Wrong CMD\n");
+	    }
 
-}
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 FSM_STATES fsm_function(uint8_t evento){
@@ -896,6 +935,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 			case 0:
 				gpio_WritePin(&LedGreen, 0);
+				//pwm_Update_DuttyCycle(&red_pwm, 99);
 				pwm_Start_Signal(&red_pwm);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 0);
@@ -905,6 +945,7 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 1:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 0);
+				//pwm_Update_DuttyCycle(&red_pwm, 1);
 				pwm_Stop_Signal(&red_pwm);
 				pwm_Disable_Output(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
@@ -912,6 +953,7 @@ FSM_STATES fsm_function(uint8_t evento){
 				break;
 			case 2:
 				gpio_WritePin(&LedGreen, 0);
+				//pwm_Update_DuttyCycle(&red_pwm, 1);
 				pwm_Stop_Signal(&red_pwm);
 				pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
@@ -920,6 +962,7 @@ FSM_STATES fsm_function(uint8_t evento){
 				break;
 			case 3:
 				gpio_WritePin(&LedGreen, 1);
+				//pwm_Update_DuttyCycle(&red_pwm, 1);
 				pwm_Stop_Signal(&red_pwm);
 				pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
@@ -928,8 +971,8 @@ FSM_STATES fsm_function(uint8_t evento){
 				break;
 			case 4:
 				gpio_WritePin(&LedGreen, 0);
+				//pwm_Update_DuttyCycle(&red_pwm, 99);
 				pwm_Start_Signal(&red_pwm);
-				pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
@@ -937,6 +980,7 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 5:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
+				//pwm_Update_DuttyCycle(&red_pwm, 99);
 				pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
@@ -944,14 +988,16 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 6:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
+				//pwm_Update_DuttyCycle(&red_pwm, 99);
 				pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
 			case 7:
 				gpio_WritePin(&LedGreen, 0);
-				//gpio_WritePin(&LedRed, 0);
+				gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 0);
+				//pwm_Update_DuttyCycle(&red_pwm, 1);
 				pwm_Stop_Signal(&red_pwm);
 				pwm_Disable_Output(&red_pwm);
 				modo = 0;
@@ -983,6 +1029,8 @@ FSM_STATES fsm_function(uint8_t evento){
 			if(fsm_program.state == STATE_COMMAND_COMPLETE){
 				parseCommands(bufferReception);
 			}
+			fsm_program.state = STATE_IDLE;
+			break;
 
 	}
 
