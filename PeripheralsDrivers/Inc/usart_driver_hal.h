@@ -72,6 +72,7 @@ typedef struct
 	uint8_t stopbits;
 	uint8_t	enableIntRX;
 	uint8_t	enableIntTX;
+	uint8_t receivedChar;
 }USART_Config_t;
 
 /*
@@ -103,6 +104,7 @@ void usart_writeMsg(USART_Handler_t *ptrUsartHandler, char *msgToSend );
 void usart1_RxCallback(void);
 void usart2_RxCallback(void);
 void usart6_RxCallback(void);
+uint8_t usart_getRxData(USART_Handler_t *ptrUsartHandler);
 
 
 #endif /* USART_DRIVER_HAL_H_ */

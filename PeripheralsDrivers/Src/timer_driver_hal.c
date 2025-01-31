@@ -242,7 +242,9 @@ void timer_SetState(Timer_Handler_t *pTimerHandler, uint8_t newState){
     }
 
 }
-
+/**
+ *
+ */
 
 /**/
 __attribute__((weak)) void Timer2_Callback(void){
