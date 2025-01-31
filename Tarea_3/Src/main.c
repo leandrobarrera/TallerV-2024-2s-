@@ -46,6 +46,8 @@ uint8_t exti_Data = 0; // guarda el valor del data del EXTi cuando se lanza la i
 uint8_t flag_clock = 0; //bandera para el flag del clock.
 uint16_t exti_conteo = 0; //contador del Encoder.
 uint8_t usart_data = 0; //el dato del usart2
+uint8_t vMax = 0;
+uint8_t dutty = 0;
 
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
@@ -771,6 +773,108 @@ void parseCommands(char *ptrBufferReception){
         // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
         usart_writeMsg(&commSerial, "Wrong CMD\n");
     }
+
+    	if (strcmp(cmd, "setBlinkyPeriod")	== 0){
+    		usart_writeMsg(&commSerial, "cmd: setBlinkyPeriod\n");
+    		sprintf(bufferData, "El periodo para el blinky será de: %u ms\n", firstParameter);
+    		usart_writeMsg(&commSerial, bufferData);
+    }
+    		if (firstParameter>=100 && firstParameter<=1500){
+    			pwm_Update_Frequency(&blinkyTimer, firstParameter);
+    		}
+    		else {
+    			usart_writeMsg(&commSerial, "Ponga un número entre 100 y 1500 ms.\n");
+    		}
+
+    	if (strcmp(cmd, "setNumber")==0){
+			usart_writeMsg(&commSerial, "cmd: setNumber\n");
+			sprintf(bufferData, "Número que se verá en el display = %u\n",firstParameter);
+			usart_writeMsg(&commSerial, bufferData);
+
+			if (firstParameter>4095) {
+				exti_conteo = 4095;
+				usart_writeMsg(&commSerial, "número por encima del máximo permitido, asignándole el valor max\n");
+			}
+			else if(firstParameter<=4095){
+				exti_conteo = firstParameter;
+			}
+			else{
+				usart_writeMsg(&commSerial, "Error, número fuera de rango (0-4095)");
+			}
+			fsm_program.state = STATE_REFRESH_DISPLAY;
+		}
+	else if (strcmp(cmd, "setPeriod")==0){
+			usart_writeMsg(&commSerial, "cmd: setPeriod\n");
+			if (firstParameter == 1){
+				sprintf(bufferData, "Valor del nuevo periodo en ms: %u\n", secondParameter);
+				usart_writeMsg(&commSerial, bufferData);
+				if (secondParameter>0){
+					pwm_Update_Frequency(&red_pwm, secondParameter);
+					usart_writeMsg(&commSerial, "RGB Period updated\n");
+				}
+				else{
+					usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
+				}
+			}
+	else if (firstParameter ==2){
+		sprintf(bufferData, "Valor del nuevo periodo en ms: %u\n", secondParameter);
+		usart_writeMsg(&commSerial, bufferData);
+			if (secondParameter>0){
+				pwm_Update_Frequency(&filtroRC, secondParameter);
+				usart_writeMsg(&commSerial, "RC Period updated\n");
+			}
+				else{
+					usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
+				}
+			}
+				else{
+					usart_writeMsg(&commSerial, "Elija 1 para cambiar el periodo del RGB o 2 para cambiar el del RC\n");
+				}
+	}
+	else if (strcmp(cmd, "setDuty")==0){
+		usart_writeMsg(&commSerial, "cmd: setDuty\n");
+		if (firstParameter == 1){
+			sprintf(bufferData, "Valor del nuevo duty: %u\n", secondParameter);
+			usart_writeMsg(&commSerial, bufferData);
+			if (secondParameter<=100 && secondParameter>=0){
+				pwm_Update_DuttyCycle(&red_pwm, secondParameter);
+				usart_writeMsg(&commSerial, "RGB duty cicle updated\n");
+			}
+			else{
+				usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
+			}
+		}
+		else if (firstParameter ==2){
+			sprintf(bufferData, "Valor del nuevo duty: %u\n", secondParameter);
+			usart_writeMsg(&commSerial, bufferData);
+			if (secondParameter<=100 && secondParameter>=0 ){
+				pwm_Update_DuttyCycle(&filtroRC, secondParameter);
+				usart_writeMsg(&commSerial, "Duty cicle updated\n");
+			}
+			else{
+				usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
+			}
+		}
+		else{
+			usart_writeMsg(&commSerial, "Elija 1 para cambiar el duty del RGB o 2 para cambiar el del RC\n");
+		}
+
+
+		}
+	else if (strcmp(cmd, "setVoltage")==0){
+			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
+			if (firstParameter<=3300 && firstParameter>=1){
+				dutty = (float) (firstParameter * 100) / vMax;
+				dutty = dutty * 10;
+				pwm_Update_DuttyCycle(&filtroRC, dutty);
+				sprintf(bufferData, "Voltage: %u mV\n", firstParameter);
+				usart_writeMsg(&commSerial, bufferData);
+			}
+			else{
+				usart_writeMsg(&commSerial, "Error: voltaje debe estar entre 1 y 3300mv");
+			}
+		}
+
 }
 
 
