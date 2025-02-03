@@ -43,7 +43,11 @@ GPIO_Handler_t LedG = {0}; 		//	PinD2
 
 
 //variables
-
+uint16_t valor = 0;
+uint16_t siete_segmentos = 0;
+uint8_t caso_transistor = 0;
+uint8_t unidades = 0;
+uint8_t decenas = 0;
 uint8_t flag_usart = 0;		//bandera para el usart
 uint8_t switcheo = 0; 		//variable para hacer switch de los transistores.
 uint16_t valX = 0;			//valor adc del pinX
@@ -77,7 +81,11 @@ GPIO_Handler_t pinRX = {0}; //	PinA0
 GPIO_Handler_t pinTX = {0}; //	PinA0
 GPIO_Handler_t pinX = {0}; //	PinA0
 GPIO_Handler_t pinY = {0}; //	PinA0
+GPIO_Handler_t switcheoUnidades = {0};
+GPIO_Handler_t switcheoDecenas = {0};
 
+//Handlers ADC
+ADC_Config_t joystick = {0};  //		Channel0: PinA0
 
 
 
@@ -86,6 +94,7 @@ GPIO_Handler_t pinY = {0}; //	PinA0
 //Handlers para los timers
 
 Timer_Handler_t blinkyTimer = {0};
+Timer_Handler_t display = {0};
 
 
 
@@ -106,7 +115,10 @@ extern void configMagic(void);
 FSM_STATES fsm_function(uint8_t evento);
 void lecturaXY(void);
 void procesar_coordenadas (void);
-
+void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
+void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
+void refresh (void);
 
 int main(void)
 {
@@ -146,7 +158,7 @@ void init_system(void){
 	gpio_WritePin(&userLed, SET);
 
 	/*	PinX	*/
-	pinX.pGPIOx 							= 	GPIOH;
+	pinX.pGPIOx 						= 	GPIOA;
 	pinX.pinConfig.GPIO_PinNumber		=	PIN_1;
 	pinX.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinX.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
@@ -159,7 +171,7 @@ void init_system(void){
 	gpio_WritePin(&pinX, SET);
 
 	/*	PinY	*/
-	pinY.pGPIOx 							= 	GPIOH;
+	pinY.pGPIOx 						= 	GPIOA;
 	pinY.pinConfig.GPIO_PinNumber		=	PIN_1;
 	pinY.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinY.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
@@ -176,18 +188,114 @@ void init_system(void){
 
 	//el joystick esta en el canal0, usamos las configs que el profe nos dejo
 
-	joystick.channel = CHANNEL_0;
-	joystick.resolution = RESOLUTION_12_BIT;
-	joystick.dataAlignment = ALIGNMENT_RIGHT;
-	joystick.interruptState = ADC_INT_ENABLE;
-	joystick.samplingPeriod = SAMPLING_PERIOD_112_CYCLES;
+	joystick.channel 				= CHANNEL_0;
+	joystick.resolution 			= RESOLUTION_12_BIT;
+	joystick.dataAlignment 			= ALIGNMENT_RIGHT;
+	joystick.interruptState 		= ADC_INT_ENABLE;
+	joystick.samplingPeriod 		= SAMPLING_PERIOD_112_CYCLES;
 
 	//cargamos la config.
 	adc_ConfigSingleChannel(&joystick);
 	adc_StartSingleConv();
 
 
+	/*configuramos los pines, y cargamos las configuraciones asi como aprendimos en la tarea #1, nada nuevo. Aqui
+		 * los "leds" son las divisiones que tiene el 7segmentos (a,b,c,d....), entonces los pines van a estas divisiones
+		 * y encienden estos "leds" enumerados alfabeticamente. El 7segmentos tambien puede verse como un pin muy grande con
+		 * varias conexiones.
+		 */
 
+	/*	LedA	*/
+	LedA.pGPIOx 						= 	GPIOB;
+	LedA.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedA.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedA.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedA.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedA.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedA);
+
+
+
+	/*	LedB	*/
+	LedB.pGPIOx 						= 	GPIOA;
+	LedB.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedB.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedB.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedB.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedB.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedB);
+
+	/*	LedC*/
+	LedC.pGPIOx 						= 	GPIOC;
+	LedC.pinConfig.GPIO_PinNumber		=	PIN_11;
+	LedC.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedC.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedC);
+
+	/*	LedD*/
+	LedD.pGPIOx 						= 	GPIOC;
+	LedD.pinConfig.GPIO_PinNumber		=	PIN_10;
+	LedD.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedD.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedD.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedD.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedD);
+
+	/*	LedE*/
+	LedE.pGPIOx 						= 	GPIOC;
+	LedE.pinConfig.GPIO_PinNumber		=	PIN_12;
+	LedE.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedE.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedE.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedE.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedE);
+
+	/*	LedF*/
+	LedF.pGPIOx 						= 	GPIOA;
+	LedF.pinConfig.GPIO_PinNumber		=	PIN_11;
+	LedF.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedF.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedF.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
+	LedF.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedF);
+
+	/*	LedG*/
+	LedG.pGPIOx 						= 	GPIOD;
+	LedG.pinConfig.GPIO_PinNumber		=	PIN_2;
+	LedG.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	LedG.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	LedG.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	LedG.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&LedG);
+
+	//la variable switcheo se convirtio en switcheoD (derecho) y switcheoI (izquierdo), ya que cambiamos la configuracion de los transistores, ya no estan mas en base comun.
+
+	/*	switcheoUnidades */
+	switcheoUnidades.pGPIOx 						= 	GPIOB;
+	switcheoUnidades.pinConfig.GPIO_PinNumber		=	PIN_7;
+	switcheoUnidades.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	switcheoUnidades.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	switcheoUnidades.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	switcheoUnidades.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&switcheoUnidades);
+
+	/*	switcheoDecenas */
+	switcheoDecenas.pGPIOx 							= 	GPIOC;
+	switcheoDecenas.pinConfig.GPIO_PinNumber		=	PIN_9;
+	switcheoDecenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	switcheoDecenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	switcheoDecenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	switcheoDecenas.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
 
 
 
@@ -206,11 +314,11 @@ void init_system(void){
 	 * en efecto, cuente segundos. Para el blinky de manera "estandar" hacemos que vaya a un ratio de 250 ms.
 	 */
 
-	blinkyTimer.pTIMx 							= TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler		=16000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period			=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
-	blinkyTimer.TIMx_Config.TIMx_mode			=TIMER_UP_COUNTER;  //
-	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
+	blinkyTimer.pTIMx 								=	TIM5;
+	blinkyTimer.TIMx_Config.TIMx_Prescaler			=	16000;  //	Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period				=	250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_mode				=	TIMER_UP_COUNTER;  //
+	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=	TIMER_INT_ENABLE;  //
 
 
 	/*	Configuramos el Timer */
@@ -222,11 +330,11 @@ void init_system(void){
 	//	Encedemos el Timer.
 	timer_SetState(&blinkyTimer,SET);
 
-	display.pTIMx 								= TIM3;
-	display.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
-	display.TIMx_Config.TIMx_Period				=2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
-	display.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
-	display.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
+	display.pTIMx 								=	TIM3;
+	display.TIMx_Config.TIMx_Prescaler			=	16000;  //	Genera incrementos de 1ms
+	display.TIMx_Config.TIMx_Period				=	2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
+	display.TIMx_Config.TIMx_mode				=	TIMER_UP_COUNTER;  //
+	display.TIMx_Config.TIMx_InterruptEnable	=	TIMER_INT_ENABLE;  //
 
 
 	/*	Configuramos el Timer */
@@ -296,21 +404,172 @@ void init_system(void){
 /*
  *  Overwrite function
  **/
+void display_numbers (uint8_t valor){
+	switch (valor){
+		case 0: {
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 0);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 1);
+					break;
+				}
+		case 1:{
+					gpio_WritePin(&LedA, 1);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 1);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 1);
+					gpio_WritePin(&LedG, 1);
+					break;
+				}
+		case 2:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 1);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 0);
+					gpio_WritePin(&LedF, 1);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 3:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 1);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 4:{
+					gpio_WritePin(&LedA, 1);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 1);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 5:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 1);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 6:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 1);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 0);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 7:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 1);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 1);
+					gpio_WritePin(&LedG, 1);
+					break;
+				}
+		case 8:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 0);
+					gpio_WritePin(&LedE, 0);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		case 9:{
+					gpio_WritePin(&LedA, 0);
+					gpio_WritePin(&LedB, 0);
+					gpio_WritePin(&LedC, 0);
+					gpio_WritePin(&LedD, 1);
+					gpio_WritePin(&LedE, 1);
+					gpio_WritePin(&LedF, 0);
+					gpio_WritePin(&LedG, 0);
+					break;
+				}
+		}
+}
 
 
 
-void analizeRecievedChar(void){
-	if(commSerial.receivedChar !='\0'){
-		bufferReception[counterReception] = commSerial.receivedChar;
-		counterReception++;
-
-		if (commSerial.receivedChar == '@'){
-			bufferReception[counterReception] = '\0';
-			counterReception = 0;
-			fsm_program.state = STATE_COMMAND_COMPLETE;
+//aqui es donde se supone que esta generando el fantasma en DECENAS, no se pudo encontrar una forma de solucionarlo. Quedo poder ver y preguntar.
+//lo que hacemos primero es apagar los pines que switchean todo lo que no sea unidades (para el primer caso por ejemplo), y si, 1 es apagar 0 encender. Usamos display_number para encender lo que requerimos y asi se completa unidades, lo mismo para los otros.
+void switcheo_transistor (uint8_t choose){
+	switch(choose){
+	case 0:{
+		gpio_WritePin(&switcheoDecenas,0);
+		display_numbers(unidades);
+		gpio_WritePin(&switcheoUnidades,1);
+		break;
+		}
+	case 1:{
+		gpio_WritePin(&switcheoUnidades,0);
+		display_numbers(decenas);
+		gpio_WritePin(&switcheoDecenas,1);
+		break;
 		}
 	}
 }
+
+
+//funcion para separar el numero, asi recibimos las unidades, decenas, centenas y millares del numero que nos arroje las lecturas del conteo, etc.
+void separador_numero (uint16_t valor){
+
+	uint16_t numero = 0;
+	// supngamos que numero es igual 1234
+	numero = valor;
+	// residuo 4,
+	unidades = numero % 10;
+	// cociente 123
+	numero = numero/10;
+	// residuo 3
+	decenas = numero % 10;
+	// cociente 12
+	numero = numero/10;
+
+
+
+
+}
+
+void refresh (void){
+	separador_numero(siete_segmentos);
+		switch(caso_transistor){
+			case 0:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor ++;
+				break;
+			}
+			case 1:{
+				switcheo_transistor(caso_transistor);
+				caso_transistor ++;
+				break;
+			}
+
+
+		}
+}
+
+
 
 /* Funcion encargada de almacenar los valores de adc para el joystick, con esto switcheamos para que sea posible
  * la lectura de los valores en la coordenada X y Y, se usaran mosfets para un switcheo mas rapido.
@@ -325,16 +584,18 @@ void lecturaXY(void){
 
 		adc_StartSingleConv();
 		valX = adc_data;
+		break;
 
 	}
 	case 1:{
 
 		adc_StartSingleConv();
 		valY = adc_data;
+		break;
 	}
 	}
 
-	if(switcheo = 0){
+	if(switcheo == 0){
 
 		switcheo = 1;
 
@@ -357,22 +618,23 @@ void lecturaXY(void){
 
 void procesar_coordenadas(void){
 
-	if(valX > 3040 && ValX < 4096){
+	if(valX > 3040 && valX < 4095){
 
 		posX = posX +1;
 	}
 
-	if(valY > 3040 && ValY < 4096){
+
+	if(valY > 3040 && valY < 4095){
 
 			posY = posY +1;
 		}
 
-	if(valX > 0 && ValX < 1040){
+	if(valX > 0 && valX < 1040){
 
 			posX = posX -1;
 		}
 
-	if(valY > 0 && ValY < 1040){
+	if(valY > 0 && valY < 1040){
 
 				posY = posY -1;
 			}
@@ -384,7 +646,7 @@ void procesar_coordenadas(void){
 
 
 
-
+// apagar, configurar nuevamente, cambiar el canal. Pin de entrada
 
 
 
@@ -399,31 +661,30 @@ FSM_STATES fsm_function(uint8_t evento){
 
 		break;
 	}
-	case STATE_MODO_RGB:{
-
-		printf("SW\n");
-		printf("ms: %d\n", conteo_ms);
+	case STATE_MENSAJE:{
 
 
 
-		fsm_program.state = STATE_IDLE;
-		break;
-	}
 
-	case STATE_GIRO_ENCODER:{
-
-		fsm_program.state = STATE_IDLE;
-		break;
-
-	}
-
-	case STATE_REFRESH_DISPLAY:{
 
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
 
-	case STATE_CHAR_RECEIVED:{
+	case STATE_JOYSTICK_MOVE:{
+
+		fsm_program.state = STATE_IDLE;
+		break;
+
+	}
+
+	case STATE_TIEMPO:{
+		refresh();
+		fsm_program.state = STATE_IDLE;
+		break;
+	}
+
+	case STATE_PANTALLA:{
 		fsm_program.state = STATE_IDLE;
 
 
@@ -431,9 +692,6 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	}
 
-	case STATE_COMMAND_COMPLETE:{
-		break;
-	}
 		default: {
 		fsm_program.state = STATE_IDLE;
 		break;
@@ -461,7 +719,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 //sube la bandera del display
 void Timer3_Callback(void){
-	fsm_program.state = STATE_REFRESH_DISPLAY;
+	fsm_program.state = STATE_TIEMPO;
 }
 
 /* este el callback del Led de estado, usamos el TooglePin para que se enciende y se apague, es la unico para lo
@@ -477,12 +735,12 @@ void Timer5_Callback(void){
 // Callback de ADC. adcData recibe el valor del adc. Subimos la bander del adc.
 void adc_CompleteCallback (void){
 	adc_data = adc_GetValue();
-	flag_adc = 1;
+	//flag_adc = 1;
 
 }
 
 void usart6_RxCallback(void){
-	fsm_program.state = STATE_CHAR_RECEIVED;
+	fsm_program.state = STATE_MENSAJE;
 	receivedChar = usart_getRxData(&commSerial);
 }
 

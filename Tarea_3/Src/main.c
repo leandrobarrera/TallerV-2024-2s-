@@ -883,7 +883,7 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-				dutty = int (firstParameter * 2)/33 ;
+				dutty = (firstParameter * 2)/33 ;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
