@@ -445,6 +445,11 @@ void init_system(void){
 	/* Se carga el PWM con los parametros establecidos */
 	pwm_Config(&filtroRC);
 
+	pwm_Enable_Output(&filtroRC);
+
+	pwm_Start_Signal(&filtroRC);
+
+
 
 
 
@@ -850,7 +855,7 @@ void parseCommands(char *ptrBufferReception){
 			if (firstParameter == 1){
 				sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 				usart_writeMsg(&commSerial, bufferData);
-					if (secondParameter>=0 && secondParameter<=100  ){
+					if (secondParameter>=2 && secondParameter<=199){
 						pwm_Update_DuttyCycle(&red_pwm, secondParameter);
 						usart_writeMsg(&commSerial, "RGB dutty cicle updated\n");
 				}
@@ -878,8 +883,7 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-				dutty = (float) (firstParameter * 100) / vMax;
-				dutty = dutty * 10;
+				dutty = int (firstParameter * 2)/33 ;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
@@ -935,8 +939,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 			case 0:
 				gpio_WritePin(&LedGreen, 0);
-				//pwm_Update_DuttyCycle(&red_pwm, 99);
-				pwm_Start_Signal(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 199);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
@@ -945,34 +948,34 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 1:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 0);
-				//pwm_Update_DuttyCycle(&red_pwm, 1);
-				pwm_Stop_Signal(&red_pwm);
-				pwm_Disable_Output(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 2);
+				//pwm_Stop_Signal(&red_pwm);
+				///pwm_Disable_Output(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 				break;
 			case 2:
 				gpio_WritePin(&LedGreen, 0);
-				//pwm_Update_DuttyCycle(&red_pwm, 1);
-				pwm_Stop_Signal(&red_pwm);
-				pwm_Disable_Output(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 2);
+				//pwm_Stop_Signal(&red_pwm);
+				//pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
 			case 3:
 				gpio_WritePin(&LedGreen, 1);
-				//pwm_Update_DuttyCycle(&red_pwm, 1);
-				pwm_Stop_Signal(&red_pwm);
-				pwm_Disable_Output(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 2);
+				//pwm_Stop_Signal(&red_pwm);
+				//pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
 			case 4:
 				gpio_WritePin(&LedGreen, 0);
-				//pwm_Update_DuttyCycle(&red_pwm, 99);
-				pwm_Start_Signal(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 199);
+				//pwm_Start_Signal(&red_pwm);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
@@ -980,26 +983,26 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 5:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
-				//pwm_Update_DuttyCycle(&red_pwm, 99);
-				pwm_Start_Signal(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 199);
+				//pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 				break;
 			case 6:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
-				//pwm_Update_DuttyCycle(&red_pwm, 99);
-				pwm_Start_Signal(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 199);
+				//pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
 				break;
 			case 7:
 				gpio_WritePin(&LedGreen, 0);
-				gpio_WritePin(&LedRed, 0);
+				//gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 0);
-				//pwm_Update_DuttyCycle(&red_pwm, 1);
-				pwm_Stop_Signal(&red_pwm);
-				pwm_Disable_Output(&red_pwm);
+				pwm_Update_DuttyCycle(&red_pwm, 2);
+				//pwm_Stop_Signal(&red_pwm);
+				//pwm_Disable_Output(&red_pwm);
 				modo = 0;
 				break;
 
