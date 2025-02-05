@@ -122,7 +122,7 @@ fsm_states_t fsm_program  = {0};
 // se creo una funcion para inicializar el sistema, esto ayuda a desplazarnos mas rapido en el codigo.
 
 void init_system(void);
-void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
 void giro (void);

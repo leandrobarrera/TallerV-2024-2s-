@@ -43,18 +43,19 @@ GPIO_Handler_t LedG = {0}; 		//	PinD2
 
 
 //variables
-uint16_t valor = 0;
-uint16_t siete_segmentos = 0;
-uint8_t caso_transistor = 0;
-uint8_t unidades = 0;
-uint8_t decenas = 0;
-uint8_t flag_usart = 0;		//bandera para el usart
-uint8_t switcheo = 0; 		//variable para hacer switch de los transistores.
-uint16_t valX = 0;			//valor adc del pinX
-uint16_t valY = 0;			//valor adc del pinY
-uint16_t adc_data = 0;		//data del adc
-int8_t posX = 0;			//posicion en X pantalla
-int8_t posY = 0;			//posicion en Y pantalla
+uint16_t valor = 0;				//variable para el tratamiento del numero mostrado en el 7segment
+uint16_t siete_segmentos = 0;	//variable para almacenar el valor del 7segmentos
+uint8_t caso_transistor = 0;	//variable para hacer switcheo de los transistores, el de unidades por decena y viceversa
+uint8_t unidades = 0;			//variable para almacenar el dato de la unidad
+uint8_t decenas = 0;			//variable para almacenar el dato de la decena
+uint8_t flag_usart = 0;			//bandera para el usart
+uint8_t contador = 0;			//variable para contar
+uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
+uint16_t valX = 0;				//valor adc del pinX
+uint16_t valY = 0;				//valor adc del pinY
+uint16_t adc_data = 0;			//data del adc
+int8_t posX = 0;				//posicion en X pantalla
+int8_t posY = 0;				//posicion en Y pantalla
 
 
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
@@ -77,8 +78,8 @@ uint8_t counterReception;
 
 //GPIO Handlers
 
-GPIO_Handler_t pinRX = {0}; //	PinA0
-GPIO_Handler_t pinTX = {0}; //	PinA0
+GPIO_Handler_t pinRX = {0}; //	PinC7
+GPIO_Handler_t pinTX = {0}; //	PinC6
 GPIO_Handler_t pinX = {0}; //	PinA0
 GPIO_Handler_t pinY = {0}; //	PinA0
 GPIO_Handler_t switcheoUnidades = {0};
@@ -95,7 +96,7 @@ ADC_Config_t joystick = {0};  //		Channel0: PinA0
 
 Timer_Handler_t blinkyTimer = {0};
 Timer_Handler_t display = {0};
-
+Timer_Handler_t contador_segundos = {0};
 
 
 
@@ -110,26 +111,24 @@ fsm_states_t fsm_program  = {0};
 
 
 
-void init_system(void);
-extern void configMagic(void);
-FSM_STATES fsm_function(uint8_t evento);
-void lecturaXY(void);
-void procesar_coordenadas (void);
-void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void init_system(void);							//funcion para iniciar las configuraciones
+extern void configMagic(void);					//se importa la funcion magic desde el main.h
+FSM_STATES fsm_function(uint8_t evento);		//maquina de estados finita
+void lecturaXY(void);							//funcion para la lectura de los datos de adc en X y X
+void procesar_coordenadas (void);				//funcion para el procesamiento de la lectura
+void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
-void refresh (void);
+void refresh (void);							//funcion para el constante refresco de el display
+void reducir_tiempo(void);						//funcion para contar hacia atras cada 1 seg
 
 int main(void)
 {
-	init_system();
+	init_system();								//Inicio de todas las configuraciones
 	config_SysTick_ms(0);
-	configMagic();
+	configMagic();								//Configuracion del Magic
+	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
 
-
-
-	//Configurando el Systick
-	config_SysTick_ms(HSI_CLOCK_CONFIGURED);
 
 	while(1){
 
@@ -204,6 +203,7 @@ void init_system(void){
 		 * y encienden estos "leds" enumerados alfabeticamente. El 7segmentos tambien puede verse como un pin muy grande con
 		 * varias conexiones.
 		 */
+
 
 	/*	LedA	*/
 	LedA.pGPIOx 						= 	GPIOB;
@@ -304,8 +304,7 @@ void init_system(void){
 
 
 
-	/*esto es lo nuevo, esta forma de cargar las configuraciones de los Handlers de los timers es parecida a
-	 * los del GPIO, la primera fila para definir el que queremos usar (quedan a eleccion del programador) no obstante
+	/* La primera fila para definir el que queremos usar (quedan a eleccion del programador) no obstante
 	 * en la tarea se nos pide que usemos ciertos timers con cierto numero especifico de bits, 32 para unos y 16 para otros.
 	 * Por tanto se uso esta escogencia. En la segunda fila del prescaler se usa el 16000 para que durante todo este
 	 * proceso de interrupciones, y teniendo que el micro va a 16MHz, el 16000 divide esta cifra y la deja en un formato de
@@ -314,27 +313,42 @@ void init_system(void){
 	 * en efecto, cuente segundos. Para el blinky de manera "estandar" hacemos que vaya a un ratio de 250 ms.
 	 */
 
-	blinkyTimer.pTIMx 								=	TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler			=	16000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period				=	250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
-	blinkyTimer.TIMx_Config.TIMx_mode				=	TIMER_UP_COUNTER;  //
-	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=	TIMER_INT_ENABLE;  //
+
+	contador_segundos.pTIMx 								= TIM2;
+	contador_segundos.TIMx_Config.TIMx_Prescaler			= 16000;  			//	Genera incrementos de 1ms
+	contador_segundos.TIMx_Config.TIMx_Period				= 1000;  			//	se pone 1000 porque en combinacion con el prescaler que es 16000, esa division da para que el timer vaya a 1000ms
+	contador_segundos.TIMx_Config.TIMx_mode					= TIMER_UP_COUNTER;
+	contador_segundos.TIMx_Config.TIMx_InterruptEnable		= TIMER_INT_ENABLE;
 
 
 	/*	Configuramos el Timer */
+	timer_Config(&contador_segundos);
+
+	//	Encedemos el Timer.
+	timer_SetState(&contador_segundos,SET);
+
+
+	blinkyTimer.pTIMx 										= TIM5;
+	blinkyTimer.TIMx_Config.TIMx_Prescaler					= 16000;  			//Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period						= 250;  				//el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_mode						= TIMER_UP_COUNTER;
+	blinkyTimer.TIMx_Config.TIMx_InterruptEnable			= TIMER_INT_ENABLE;
+
+
+	/*	Configuramos el Timer */
+	timer_Config(&blinkyTimer);
 
 	/*Cuenta regresiva */
-
 	timer_Config(&blinkyTimer);
 
 	//	Encedemos el Timer.
 	timer_SetState(&blinkyTimer,SET);
 
-	display.pTIMx 								=	TIM3;
-	display.TIMx_Config.TIMx_Prescaler			=	16000;  //	Genera incrementos de 1ms
-	display.TIMx_Config.TIMx_Period				=	2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
-	display.TIMx_Config.TIMx_mode				=	TIMER_UP_COUNTER;  //
-	display.TIMx_Config.TIMx_InterruptEnable	=	TIMER_INT_ENABLE;  //
+	display.pTIMx 											= TIM3;
+	display.TIMx_Config.TIMx_Prescaler						= 16000;  			//Genera incrementos de 1ms
+	display.TIMx_Config.TIMx_Period							= 2;  				//60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
+	display.TIMx_Config.TIMx_mode							= TIMER_UP_COUNTER;
+	display.TIMx_Config.TIMx_InterruptEnable				= TIMER_INT_ENABLE;
 
 
 	/*	Configuramos el Timer */
@@ -344,11 +358,8 @@ void init_system(void){
 	timer_SetState(&display,SET);
 
 
-
-
-
-
 	fsm_program.state = STATE_IDLE;
+
 
 	/* Configuramos los pines del puerto serial
 	 * pin sobre el que funciona el USART6 (TX) */
@@ -404,6 +415,9 @@ void init_system(void){
 /*
  *  Overwrite function
  **/
+
+/* Se pinta un led y luego otro, switcheando segun el numero requerido, 0 los enciende, 1 los apaga, esto debido a los transistores usados*/
+
 void display_numbers (uint8_t valor){
 	switch (valor){
 		case 0: {
@@ -511,8 +525,8 @@ void display_numbers (uint8_t valor){
 
 
 
-//aqui es donde se supone que esta generando el fantasma en DECENAS, no se pudo encontrar una forma de solucionarlo. Quedo poder ver y preguntar.
-//lo que hacemos primero es apagar los pines que switchean todo lo que no sea unidades (para el primer caso por ejemplo), y si, 1 es apagar 0 encender. Usamos display_number para encender lo que requerimos y asi se completa unidades, lo mismo para los otros.
+
+//lo que hacemos primero es apagar los pines que switchean todo lo que no sea unidades (para el primer caso por ejemplo), y si, 1 es apagar 0 encender. Usamos display_number para encender lo que requerimos y asi se completa unidades, lo mismo para decenas.
 void switcheo_transistor (uint8_t choose){
 	switch(choose){
 	case 0:{
@@ -535,11 +549,11 @@ void switcheo_transistor (uint8_t choose){
 void separador_numero (uint16_t valor){
 
 	uint16_t numero = 0;
-	// supngamos que numero es igual 1234
+	// supongamos que numero es igual 34
 	numero = valor;
 	// residuo 4,
 	unidades = numero % 10;
-	// cociente 123
+	// cociente 3
 	numero = numero/10;
 	// residuo 3
 	decenas = numero % 10;
@@ -569,7 +583,12 @@ void refresh (void){
 		}
 }
 
-
+void reducir_tiempo(void){
+	contador --;
+		if(contador == 0){
+			contador = 0;
+		}
+}
 
 /* Funcion encargada de almacenar los valores de adc para el joystick, con esto switcheamos para que sea posible
  * la lectura de los valores en la coordenada X y Y, se usaran mosfets para un switcheo mas rapido.
@@ -680,6 +699,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_TIEMPO:{
 		refresh();
+
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -718,6 +738,10 @@ FSM_STATES fsm_function(uint8_t evento){
 
 
 //sube la bandera del display
+void Timer2_Callback(void){
+	fsm_program.state = STATE_TIEMPO;
+}
+
 void Timer3_Callback(void){
 	fsm_program.state = STATE_TIEMPO;
 }

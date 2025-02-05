@@ -1045,7 +1045,7 @@ void adc_CompleteCallback (void){
 //Callbacks de USART2. usartdata es la variable que recibe lo recolectado por usart, recordemos que usart esta configurado para trabajar con RX y TX al tiempo.
 void usart2_RxCallback(void){
 	flag_usart = 1;
-	usart_data = usart_getRxData();
+	//usart_data = usart_getRxData();
 }
 
 
