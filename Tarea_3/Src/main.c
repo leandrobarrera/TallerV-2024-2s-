@@ -327,18 +327,18 @@ void init_system(void){
 	gpio_Config(&LedGreen);
 	gpio_WritePin(&LedGreen, 0);
 
-	/*	pinFiltroRC*/
-	/*pinfiltroRC.pGPIOx 							= 	GPIOB;
-	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_10;
+	/* pinFiltroRC */
+	pinfiltroRC.pGPIOx 							= 	GPIOA;
+	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_6;
 	pinfiltroRC.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
 	pinfiltroRC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	pinfiltroRC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
 	pinfiltroRC.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-	pinfiltroRC.pinConfig.GPIO_PinAltFunMode	= 	AF1;
+	pinfiltroRC.pinConfig.GPIO_PinAltFunMode	= 	AF2;
 
 
 	gpio_Config(&pinfiltroRC);
-*/
+
 
 
 
@@ -393,10 +393,10 @@ void init_system(void){
 	 * en efecto, cuente segundos. Para el blinky de manera "estandar" hacemos que vaya a un ratio de 250 ms.
 	 */
 
-	blinkyTimer.pTIMx 							= TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler		=16000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period			=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
-	blinkyTimer.TIMx_Config.TIMx_mode			=TIMER_UP_COUNTER;  //
+	blinkyTimer.pTIMx 								= TIM5;
+	blinkyTimer.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period				=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
 
@@ -406,7 +406,7 @@ void init_system(void){
 	//	Encedemos el Timer.
 	timer_SetState(&blinkyTimer,SET);
 
-	display.pTIMx 								= TIM3;
+	display.pTIMx 								= TIM2;
 	display.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
 	display.TIMx_Config.TIMx_Period				=2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
 	display.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
@@ -434,11 +434,11 @@ void init_system(void){
 
 	pwm_Start_Signal(&red_pwm);
 
-	filtroRC.ptrTIMx = TIM2;
-	filtroRC.config.channel = PWM_CHANNEL_3;
-	filtroRC.config.periodo = 100;
+	filtroRC.ptrTIMx = TIM3;
+	filtroRC.config.channel = PWM_CHANNEL_1;
+	filtroRC.config.periodo = 1000;
 	filtroRC.config.prescaler = 16; // freq
-	filtroRC.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+	filtroRC.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
 	/* Se carga el PWM con los parametros establecidos */
@@ -859,12 +859,12 @@ void parseCommands(char *ptrBufferReception){
 		else if (firstParameter ==2){
 			sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 			usart_writeMsg(&commSerial, bufferData);
-				if (secondParameter<=100 && secondParameter>=1 ){
+				if (secondParameter<=1000 && secondParameter>=1 ){
 					pwm_Update_DuttyCycle(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Duty cicle updated\n");
 				}
 				else{
-					usart_writeMsg(&commSerial, "El valor del duty debe estar entre 1-100 \n");
+					usart_writeMsg(&commSerial, "El valor del duty debe estar entre 1-1000 \n");
 				}
 				}
 				else{
@@ -875,7 +875,9 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-				dutty = (int) (firstParameter * 2)/33 ;
+
+				dutty = filtroRC.config.periodo * firstParameter / 3300;
+				//dutty = (int) (firstParameter * 2)/33 ;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
@@ -1055,13 +1057,9 @@ FSM_STATES fsm_function(uint8_t evento){
  */
 
 
+
+
 void Timer2_Callback(void){
-
-}
-
-
-//sube la bandera del display
-void Timer3_Callback(void){
 	fsm_program.state = STATE_REFRESH_DISPLAY;
 }
 
