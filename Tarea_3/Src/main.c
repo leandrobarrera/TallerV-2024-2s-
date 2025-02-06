@@ -809,7 +809,7 @@ void parseCommands(char *ptrBufferReception){
     				exti_conteo = firstParameter;
     			}
     			else{
-    				usart_writeMsg(&commSerial, "Error, número fuera de rango (0-4095)");
+    				usart_writeMsg(&commSerial, "Error, numero fuera de rango (0-4095)");
     			}
     			fsm_program.state = STATE_REFRESH_DISPLAY;
     			}
