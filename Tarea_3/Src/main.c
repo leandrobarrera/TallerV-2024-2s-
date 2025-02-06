@@ -122,7 +122,7 @@ fsm_states_t fsm_program  = {0};
 // se creo una funcion para inicializar el sistema, esto ayuda a desplazarnos mas rapido en el codigo.
 
 void init_system(void);
-void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
 void giro (void);
@@ -328,7 +328,7 @@ void init_system(void){
 	gpio_WritePin(&LedGreen, 0);
 
 	/*	pinFiltroRC*/
-	pinfiltroRC.pGPIOx 							= 	GPIOB;
+	/*pinfiltroRC.pGPIOx 							= 	GPIOB;
 	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_10;
 	pinfiltroRC.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
 	pinfiltroRC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
@@ -338,7 +338,7 @@ void init_system(void){
 
 
 	gpio_Config(&pinfiltroRC);
-
+*/
 
 
 
@@ -424,9 +424,9 @@ void init_system(void){
 
 	red_pwm.ptrTIMx = TIM4;
 	red_pwm.config.channel = PWM_CHANNEL_3;
-	red_pwm.config.periodo = 200;
-	red_pwm.config.prescaler = 5; // freq 10us
-	red_pwm.config.duttyCicle = 100; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
+	red_pwm.config.periodo = 100;
+	red_pwm.config.prescaler = 16; // freq 10us
+	red_pwm.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
 
 	/* Se carga el PWM con los parametros establecidos */
 	pwm_Config(&red_pwm);
@@ -434,12 +434,11 @@ void init_system(void){
 
 	pwm_Start_Signal(&red_pwm);
 
-
 	filtroRC.ptrTIMx = TIM2;
 	filtroRC.config.channel = PWM_CHANNEL_3;
-	filtroRC.config.periodo = 200;
-	filtroRC.config.prescaler = 5; // freq
-	filtroRC.config.duttyCicle = 50; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+	filtroRC.config.periodo = 100;
+	filtroRC.config.prescaler = 16; // freq
+	filtroRC.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
 	/* Se carga el PWM con los parametros establecidos */
@@ -760,11 +759,11 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "Help Menu CMDs:\n");
         usart_writeMsg(&commSerial, "1) help            -- Print this menu\n");
         usart_writeMsg(&commSerial, "2) dummy #A #B    -- dummy cmd, #A and #B are uint32_t\n");
-        usart_writeMsg(&commSerial, "3) usermsg # # msg -- msg is a string comming from outside\n");
-        usart_writeMsg(&commSerial, "4) setPeriod # -- Change the Led_state period (ms)n");
-        usart_writeMsg(&commSerial, "5) setDuty # -- Change the duty cycle (%)\n");
-        usart_writeMsg(&commSerial, "6) setDisplay # -- Change displayed number\n");
-        usart_writeMsg(&commSerial, "7) setVolt # -- PWM-DAC output in mV\n");
+        usart_writeMsg(&commSerial, "3) setPeriod    -- insert the period of the blinky\n");
+        usart_writeMsg(&commSerial, "4) setFreq # -- Change the Led_state period (ms) \n");
+        usart_writeMsg(&commSerial, "5) setDutty # -- Change the duty cycle (%), ENTRE 1 Y 99\n");
+        usart_writeMsg(&commSerial, "6) setNumber # -- Change displayed number\n");
+        usart_writeMsg(&commSerial, "7) setVoltage # -- PWM-DAC output in mV\n");
     }
 
     // El comando dummy sirve para entender como funciona la recepción de números enviados
@@ -780,13 +779,6 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, bufferData);
     }
 
-    // El comando usermsg sirve para entender como funciona la recepción de strings enviados
-    // desde la consola
-    else if (strcmp(cmd, "usermsg") == 0){
-        usart_writeMsg(&commSerial, "CMD: usermsg\n");
-        usart_writeMsg(&commSerial, userMsg);
-        usart_writeMsg(&commSerial, "\n");
-    }
 
     else if (strcmp(cmd, "setPeriod")	== 0){
 		usart_writeMsg(&commSerial, "cmd: setPeriod\n");
@@ -829,7 +821,7 @@ void parseCommands(char *ptrBufferReception){
 				usart_writeMsg(&commSerial, bufferData);
 					if (secondParameter>0){
 						pwm_Update_Frequency(&red_pwm, secondParameter);
-						usart_writeMsg(&commSerial, "RGB Period updated\n");
+						usart_writeMsg(&commSerial, "Freq RGB updated\n");
 					}
 					else{
 						usart_writeMsg(&commSerial, "el valor del periodo debe ser mayor a cero\n");
@@ -855,24 +847,24 @@ void parseCommands(char *ptrBufferReception){
 			if (firstParameter == 1){
 				sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 				usart_writeMsg(&commSerial, bufferData);
-					if (secondParameter>=2 && secondParameter<=199){
+					if (secondParameter>=1 && secondParameter<=100  ){
 						pwm_Update_DuttyCycle(&red_pwm, secondParameter);
 						usart_writeMsg(&commSerial, "RGB dutty cicle updated\n");
 				}
 			else{
-				usart_writeMsg(&commSerial, "El valor del dutty debe estar entre 0-100 porciento \n");
+				usart_writeMsg(&commSerial, "El valor del dutty debe estar entre 1-100 \n");
 			}
 		}
 
 		else if (firstParameter ==2){
 			sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 			usart_writeMsg(&commSerial, bufferData);
-				if (secondParameter<=100 && secondParameter>=0 ){
+				if (secondParameter<=100 && secondParameter>=1 ){
 					pwm_Update_DuttyCycle(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Duty cicle updated\n");
 				}
 				else{
-					usart_writeMsg(&commSerial, "El valor del duty debe estar entre 0-100 porciento \n");
+					usart_writeMsg(&commSerial, "El valor del duty debe estar entre 1-100 \n");
 				}
 				}
 				else{
@@ -883,7 +875,7 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-				dutty = (firstParameter * 2)/33 ;
+				dutty = (int) (firstParameter * 2)/33 ;
 				pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
@@ -939,7 +931,8 @@ FSM_STATES fsm_function(uint8_t evento){
 
 			case 0:
 				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 199);
+				pwm_Update_DuttyCycle(&red_pwm, 99);
+				//pwm_Start_Signal(&red_pwm);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
@@ -948,15 +941,15 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 1:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 2);
+				pwm_Update_DuttyCycle(&red_pwm, 1);
 				//pwm_Stop_Signal(&red_pwm);
-				///pwm_Disable_Output(&red_pwm);
+				//pwm_Disable_Output(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
 				break;
 			case 2:
 				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 2);
+				pwm_Update_DuttyCycle(&red_pwm, 1);
 				//pwm_Stop_Signal(&red_pwm);
 				//pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
@@ -965,7 +958,7 @@ FSM_STATES fsm_function(uint8_t evento){
 				break;
 			case 3:
 				gpio_WritePin(&LedGreen, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 2);
+				pwm_Update_DuttyCycle(&red_pwm, 1);
 				//pwm_Stop_Signal(&red_pwm);
 				//pwm_Disable_Output(&red_pwm);
 				//gpio_WritePin(&LedRed, 0);
@@ -974,7 +967,7 @@ FSM_STATES fsm_function(uint8_t evento){
 				break;
 			case 4:
 				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 199);
+				pwm_Update_DuttyCycle(&red_pwm, 99);
 				//pwm_Start_Signal(&red_pwm);
 				//gpio_WritePin(&LedRed, 1);
 				gpio_WritePin(&LedBlue, 1);
@@ -983,7 +976,7 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 5:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 199);
+				pwm_Update_DuttyCycle(&red_pwm, 99);
 				//pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 0);
 				modo ++;
@@ -991,7 +984,7 @@ FSM_STATES fsm_function(uint8_t evento){
 			case 6:
 				gpio_WritePin(&LedGreen, 1);
 				//gpio_WritePin(&LedRed, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 199);
+				pwm_Update_DuttyCycle(&red_pwm, 99);
 				//pwm_Start_Signal(&red_pwm);
 				gpio_WritePin(&LedBlue, 1);
 				modo ++;
@@ -1000,7 +993,7 @@ FSM_STATES fsm_function(uint8_t evento){
 				gpio_WritePin(&LedGreen, 0);
 				//gpio_WritePin(&LedRed, 0);
 				gpio_WritePin(&LedBlue, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 2);
+				pwm_Update_DuttyCycle(&red_pwm, 1);
 				//pwm_Stop_Signal(&red_pwm);
 				//pwm_Disable_Output(&red_pwm);
 				modo = 0;
