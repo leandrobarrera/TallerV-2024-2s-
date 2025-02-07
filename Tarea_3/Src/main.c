@@ -761,7 +761,7 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "2) dummy #A #B    -- dummy cmd, #A and #B are uint32_t\n");
         usart_writeMsg(&commSerial, "3) setPeriod    -- insert the period of the blinky\n");
         usart_writeMsg(&commSerial, "4) setFreq # -- Change the Led_state period (ms) \n");
-        usart_writeMsg(&commSerial, "5) setDutty # -- Change the duty cycle (%), ENTRE 1 Y 99\n");
+        usart_writeMsg(&commSerial, "5) setDutty # -- Change the duty cycle (%), ENTRE 1 Y 99:LED & 1-1000 para FRC\n");
         usart_writeMsg(&commSerial, "6) setNumber # -- Change displayed number\n");
         usart_writeMsg(&commSerial, "7) setVoltage # -- PWM-DAC output in mV\n");
     }
