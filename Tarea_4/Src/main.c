@@ -16,9 +16,11 @@
 #include "timer_driver_hal.h"
 #include "exti_driver_hal.h"
 #include "systick_driver_hal.h"
+#include "pll_driver_hal.h"
 #include "main.h"
 #include "pwm_driver_hal.h"
 #include "usart_driver_hal.h"
+#include "adc_driver_hal.h"
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
 
@@ -31,8 +33,8 @@ GPIO_Handler_t LedD = {0}; 		//	PinC10
 GPIO_Handler_t LedE = {0};		//	PinC12
 GPIO_Handler_t LedF = {0};		//	PinA11
 GPIO_Handler_t LedG = {0}; 		//	PinD2
-GPIO_Handler_t pinfiltroRC = {0}; 		//	PinB10
-
+GPIO_Handler_t pinCollector = {0}; 		//	PinA6
+GPIO_Handler_t pinBase = {0}; 		//	PinA7
 
 
 //variables
@@ -47,8 +49,12 @@ uint8_t exti_Data = 0; // guarda el valor del data del EXTi cuando se lanza la i
 uint8_t flag_clock = 0; //bandera para el flag del clock.
 uint16_t exti_conteo = 0; //contador del Encoder.
 uint8_t usart_data = 0; //el dato del usart2
-uint8_t vMax = 0;
-uint8_t dutty = 0;
+uint16_t dutty = 0;
+uint32_t adc_data = 0; //valor adc
+uint8_t flag_adc = 0; //bandera switch adc
+uint32_t voltage_c = 0; //voltaje del collector
+uint32_t voltage_b = 0; //voltaje del base
+
 
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
@@ -108,10 +114,15 @@ Timer_Handler_t display = {0};
 
 // Handler PWM
 PWM_Handler_t red_pwm = {0};
-PWM_Handler_t filtroRC = {0};
+PWM_Handler_t base = {0};
+PWM_Handler_t collector = {0};
 
 //Maquina de estados finito :D
 fsm_states_t fsm_program  = {0};
+
+//Handlers ADC
+ADC_Config_t v_base = {0};
+ADC_Config_t v_collector = {0};
 
 
 
@@ -122,7 +133,7 @@ fsm_states_t fsm_program  = {0};
 // se creo una funcion para inicializar el sistema, esto ayuda a desplazarnos mas rapido en el codigo.
 
 void init_system(void);
-void display_numbers(uint8_t valor);	//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
 void giro (void);
@@ -134,6 +145,7 @@ FSM_STATES fsm_function(uint8_t evento);
 
 int main(void)
 {
+	//configPLL(100);
 	init_system();
 	config_SysTick_ms(0);
 	configMagic();
@@ -327,17 +339,31 @@ void init_system(void){
 	gpio_Config(&LedGreen);
 	gpio_WritePin(&LedGreen, 0);
 
-	/* pinFiltroRC */
-	pinfiltroRC.pGPIOx 							= 	GPIOA;
-	pinfiltroRC.pinConfig.GPIO_PinNumber		=	PIN_6;
-	pinfiltroRC.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
-	pinfiltroRC.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
-	pinfiltroRC.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	pinfiltroRC.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-	pinfiltroRC.pinConfig.GPIO_PinAltFunMode	= 	AF2;
+	/* pinCollector */
+	pinCollector.pGPIOx 							= 	GPIOA;
+	pinCollector.pinConfig.GPIO_PinNumber			=	PIN_6;
+	pinCollector.pinConfig.GPIO_PinMode				=	GPIO_MODE_ALTFN;
+	pinCollector.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
+	pinCollector.pinConfig.GPIO_PinOutputSpeed		=	GPIO_OSPEED_FAST;
+	pinCollector.pinConfig.GPIO_PinPuPdControl		=	GPIO_PUPDR_NOTHING;
+	pinCollector.pinConfig.GPIO_PinAltFunMode		= 	AF2;
 
 
-	gpio_Config(&pinfiltroRC);
+	gpio_Config(&pinCollector);
+
+
+	/* pinBase */
+	pinBase.pGPIOx 							= 	GPIOA;
+	pinBase.pinConfig.GPIO_PinNumber		=	PIN_7;
+	pinBase.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
+	pinBase.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	pinBase.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	pinBase.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+	pinBase.pinConfig.GPIO_PinAltFunMode	= 	AF2;
+
+
+	gpio_Config(&pinBase);
+
 
 
 
@@ -434,19 +460,35 @@ void init_system(void){
 
 	pwm_Start_Signal(&red_pwm);
 
-	filtroRC.ptrTIMx = TIM3;
-	filtroRC.config.channel = PWM_CHANNEL_1;
-	filtroRC.config.periodo = 1000;
-	filtroRC.config.prescaler = 16; // freq
-	filtroRC.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+
+
+	collector.ptrTIMx = TIM3;
+	collector.config.channel = PWM_CHANNEL_1;
+	collector.config.periodo = 1000;
+	collector.config.prescaler = 16; // freq
+	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
 	/* Se carga el PWM con los parametros establecidos */
-	pwm_Config(&filtroRC);
+	pwm_Config(&collector);
 
-	pwm_Enable_Output(&filtroRC);
+	pwm_Enable_Output(&collector);
 
-	pwm_Start_Signal(&filtroRC);
+	pwm_Start_Signal(&collector);
+
+	base.ptrTIMx = TIM3;
+	base.config.channel = PWM_CHANNEL_2;
+	base.config.periodo = 1000;
+	base.config.prescaler = 16; // freq
+	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+
+
+	/* Se carga el PWM con los parametros establecidos */
+	pwm_Config(&base);
+
+	pwm_Enable_Output(&base);
+
+	pwm_Start_Signal(&base);
 
 
 
@@ -500,18 +542,31 @@ void init_system(void){
 
 	/* Configuramos el ADC */
 
-	//
+	//ADC para leer voltaje de colector. Pin PC0
 
-	/*joystick.channel 				= CHANNEL_0;
-	joystick.resolution 			= RESOLUTION_12_BIT;
-	joystick.dataAlignment 			= ALIGNMENT_RIGHT;
-	joystick.interruptState 		= ADC_INT_ENABLE;
-	joystick.samplingPeriod 		= SAMPLING_PERIOD_112_CYCLES;
+	v_collector.channel 			= CHANNEL_10;
+	v_collector.resolution 			= RESOLUTION_12_BIT;
+	v_collector.dataAlignment 		= ALIGNMENT_RIGHT;
+	v_collector.interruptState 		= ADC_INT_ENABLE;
+	v_collector.samplingPeriod 		= SAMPLING_PERIOD_112_CYCLES;
 
 	//cargamos la config.
-	adc_ConfigSingleChannel(&joystick);
+	adc_ConfigSingleChannel(&v_collector);
 	adc_StartSingleConv();
 
+	//ADC para leer voltaje de base. PinPC1
+
+	v_base.channel 					= CHANNEL_11;
+	v_base.resolution 				= RESOLUTION_12_BIT;
+	v_base.dataAlignment 			= ALIGNMENT_RIGHT;
+	v_base.interruptState 			= ADC_INT_ENABLE;
+	v_base.samplingPeriod 			= SAMPLING_PERIOD_112_CYCLES;
+
+	// no se carga esta config porque solo puede haber uno cargado, por algo se llama configsinglechannel
+
+	//cargamos la config.
+	//adc_ConfigSingleChannel(&v_base);
+	//adc_StartSingleConv();
 
 
 
@@ -781,6 +836,10 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "5) setDutty # -- Change the duty cycle (%), ENTRE 1 Y 99:LED & 1-1000 para FRC\n");
         usart_writeMsg(&commSerial, "6) setNumber # -- Change displayed number\n");
         usart_writeMsg(&commSerial, "7) setVoltage # -- PWM-DAC output in mV\n");
+        usart_writeMsg(&commSerial, "8) setVoltB # -- PWM-DAC output for base (mV)\n");
+        usart_writeMsg(&commSerial, "9) setVoltC # -- PWM-DAC output for collector (mV)\n");
+        usart_writeMsg(&commSerial, "10) readVoltB # -- ADC value for base (mV)\n");
+        usart_writeMsg(&commSerial, "11) readVoltC # -- ADC value for collector (mV)\n");
     }
 
     // El comando dummy sirve para entender como funciona la recepción de números enviados
@@ -849,7 +908,7 @@ void parseCommands(char *ptrBufferReception){
 				sprintf(bufferData, "Valor de la nueva freq^⁻1 en ms: %lu\n", secondParameter);
 				usart_writeMsg(&commSerial, bufferData);
 				if (secondParameter>0){
-					pwm_Update_Frequency(&filtroRC, secondParameter);
+					//pwm_Update_Frequency(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Freq RC updated\n");
 				}
 				else{
@@ -877,7 +936,7 @@ void parseCommands(char *ptrBufferReception){
 			sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 			usart_writeMsg(&commSerial, bufferData);
 				if (secondParameter<=1000 && secondParameter>=1 ){
-					pwm_Update_DuttyCycle(&filtroRC, secondParameter);
+					//pwm_Update_DuttyCycle(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Duty cicle updated\n");
 				}
 				else{
@@ -893,9 +952,9 @@ void parseCommands(char *ptrBufferReception){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
 
-				dutty = filtroRC.config.periodo * firstParameter / 3300;
+				//dutty = filtroRC.config.periodo * firstParameter / 3300;
 				//dutty = (int) (firstParameter * 2)/33 ;
-				pwm_Update_DuttyCycle(&filtroRC, dutty);
+				//pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
 			}
@@ -903,10 +962,65 @@ void parseCommands(char *ptrBufferReception){
 				usart_writeMsg(&commSerial, "Error: voltaje debe estar entre 1 y 3300mv");
 			}
 		}
+
+	else if (strcmp(cmd, "setVoltB")==0){
+		usart_writeMsg(&commSerial, "cmd: setVoltB\n");
+		if (firstParameter<=3300 && firstParameter>=1){
+			dutty = base.config.periodo * firstParameter / 3300;
+			pwm_Update_DuttyCycle(&base, dutty);
+			sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
+			usart_writeMsg(&commSerial, bufferData);
+
+
+		}
+		else{
+			usart_writeMsg(&commSerial, "Error: voltaje debe estar entre 1 y 3300mv");
+		}
+
+
+	}
+
+	else if (strcmp(cmd, "setVoltC")==0){
+		usart_writeMsg(&commSerial, "cmd: setVoltC\n");
+		if (firstParameter<=3300 && firstParameter>=1){
+			dutty = collector.config.periodo * firstParameter / 3300;
+			pwm_Update_DuttyCycle(&collector, dutty);
+			sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
+			usart_writeMsg(&commSerial, bufferData);
+		}
+		else{
+			usart_writeMsg(&commSerial, "Error: voltaje debe estar entre 1 y 3300mv");
+		}
+
+
+	}
+
+	else if (strcmp(cmd, "readVoltB")==0){
+		usart_writeMsg(&commSerial, "Read voltage of base (mV) \n");
+		//adc_ConfigSingleChannel(&v_base);
+		//adc_StartSingleConv();
+		sprintf(bufferData, "Voltage of base: %lu mV\n", voltage_b);
+		usart_writeMsg(&commSerial, bufferData);
+
+
+	}
+
+	else if (strcmp(cmd, "readVoltC")==0){
+		usart_writeMsg(&commSerial, "Read voltage of collector (mV) \n");
+		//adc_ConfigSingleChannel(&v_collector);
+		//adc_StartSingleConv();
+		sprintf(bufferData, "Voltage of collector: %lu mV\n", voltage_c);
+		usart_writeMsg(&commSerial, bufferData);
+
+
+	}
+
 	 else{
 	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
 	        usart_writeMsg(&commSerial, "Wrong CMD\n");
 	    }
+
+
 
     }
 
@@ -1034,6 +1148,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_REFRESH_DISPLAY:{
 		refresh();
+		adc_StartSingleConv();
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -1050,6 +1165,27 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_COMMAND_COMPLETE:{
+
+	}
+	case STATE_READ_ADC:{
+		fsm_program.state = STATE_IDLE;
+		//adc_StartSingleConv();
+		 //adc_data = adc_GetValue();
+		if(flag_adc == 0){
+					adc_ConfigSingleChannel(&v_collector);
+					//adc_StartSingleConv();
+					voltage_c = adc_GetValue();
+					flag_adc = 1;
+				}
+				else{
+					adc_ConfigSingleChannel(&v_base);
+					//adc_StartSingleConv();
+					voltage_b = adc_GetValue();
+					flag_adc = 0;
+				}
+
+			fsm_program.state = STATE_IDLE;
+			break;
 
 	}
 		default: {
@@ -1078,14 +1214,16 @@ FSM_STATES fsm_function(uint8_t evento){
 
 void Timer2_Callback(void){
 	fsm_program.state = STATE_REFRESH_DISPLAY;
+	//adc_StartSingleConv();
 }
 
-/* este el callback del Led de estado, usamos el TooglePin para que se enciende y se apague, es la unico para lo
+/* este el callback del Led de estado, usamos el TooglePin para que se enciende y se apague, es la unico para loode			=	GPIO_MODE_
  * que nos sirve esta interrupcion. A grandes rasgos sirve para saber que el sistema funciona.
 
  Ademas de eso, agregamos la bandera para que se de la conversion de adc y la inicializacion de la variable sendMsg*/
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
+
 
 }
 
@@ -1107,6 +1245,11 @@ void usart6_RxCallback(void){
 	receivedChar = usart_getRxData(&commSerial);
 }
 
+void adc_CompleteCallback (void){
+	fsm_program.state = STATE_READ_ADC;
+	 //adc_data = adc_GetValue();
+
+}
 
 /*
  *  Esta funcion sirve para detectar problemas de parametros
