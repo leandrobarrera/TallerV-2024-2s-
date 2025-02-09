@@ -144,8 +144,8 @@ void init_system(void){
 	/*	Configuramos los pines*/
 
 	/*	LedBlinky	*/
-	userLed.pGPIOx 							= 	GPIOH;
-	userLed.pinConfig.GPIO_PinNumber		=	PIN_1;
+	userLed.pGPIOx 							= 	GPIOA;
+	userLed.pinConfig.GPIO_PinNumber		=	PIN_5;
 	userLed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	userLed.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	userLed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -691,6 +691,9 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_JOYSTICK_MOVE:{
+		lecturaXY();
+		adc_data = adc_GetValue();
+
 
 		fsm_program.state = STATE_IDLE;
 		break;
@@ -699,7 +702,6 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_TIEMPO:{
 		refresh();
-
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -758,8 +760,8 @@ void Timer5_Callback(void){
 
 // Callback de ADC. adcData recibe el valor del adc. Subimos la bander del adc.
 void adc_CompleteCallback (void){
-	adc_data = adc_GetValue();
-	//flag_adc = 1;
+	fsm_program.state = STATE_JOYSTICK_MOVE;
+
 
 }
 
