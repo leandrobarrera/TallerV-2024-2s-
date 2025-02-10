@@ -54,7 +54,7 @@ uint32_t adc_data = 0; //valor adc
 uint8_t flag_adc = 0; //bandera switch adc
 uint32_t voltage_c = 0; //voltaje del collector
 uint32_t voltage_b = 0; //voltaje del base
-
+uint32_t array_adc = 0;
 
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
@@ -1169,18 +1169,16 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 	case STATE_READ_ADC:{
 		fsm_program.state = STATE_IDLE;
-		//adc_StartSingleConv();
-		 //adc_data = adc_GetValue();
 		if(flag_adc == 0){
-					adc_ConfigSingleChannel(&v_collector);
-					//adc_StartSingleConv();
 					voltage_c = adc_GetValue();
+					adc_ConfigSingleChannel(&v_base);
 					flag_adc = 1;
 				}
 				else{
-					adc_ConfigSingleChannel(&v_base);
-					//adc_StartSingleConv();
 					voltage_b = adc_GetValue();
+					adc_ConfigSingleChannel(&v_collector);
+
+
 					flag_adc = 0;
 				}
 
