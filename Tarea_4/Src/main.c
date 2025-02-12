@@ -24,17 +24,19 @@
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
 
+#define ARRAY_SIZE 100  // 128 muestras por array
+
 //Handlers GPIO, para los pines. Lo de toda la vida.
-GPIO_Handler_t userLed = {0}; 	//	PinH1
-GPIO_Handler_t LedA = {0}; 		//	PinB12
-GPIO_Handler_t LedB = {0}; 		//	PinA12
-GPIO_Handler_t LedC = {0}; 		//	PinC11
-GPIO_Handler_t LedD = {0}; 		//	PinC10
-GPIO_Handler_t LedE = {0};		//	PinC12
-GPIO_Handler_t LedF = {0};		//	PinA11
-GPIO_Handler_t LedG = {0}; 		//	PinD2
+GPIO_Handler_t userLed = {0}; 			//	PinH1
+GPIO_Handler_t LedA = {0}; 				//	PinB12
+GPIO_Handler_t LedB = {0}; 				//	PinA12
+GPIO_Handler_t LedC = {0}; 				//	PinC11
+GPIO_Handler_t LedD = {0}; 				//	PinC10
+GPIO_Handler_t LedE = {0};				//	PinC12
+GPIO_Handler_t LedF = {0};				//	PinA11
+GPIO_Handler_t LedG = {0}; 				//	PinD2
 GPIO_Handler_t pinCollector = {0}; 		//	PinA6
-GPIO_Handler_t pinBase = {0}; 		//	PinA7
+GPIO_Handler_t pinBase = {0}; 			//	PinA7
 
 
 //variables
@@ -54,7 +56,10 @@ uint32_t adc_data = 0; //valor adc
 uint8_t flag_adc = 0; //bandera switch adc
 uint32_t voltage_c = 0; //voltaje del collector
 uint32_t voltage_b = 0; //voltaje del base
-uint32_t array_adc = 0;
+uint16_t adc_array_base[ARRAY_SIZE] = {0};      // array para v_base
+uint16_t adc_array_collector[ARRAY_SIZE] = {0}; // array para v_collector
+uint8_t index_base = 0;      // indice para base
+uint8_t index_collector = 0; // indice para collector
 
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
@@ -81,20 +86,20 @@ uint8_t counterReception;
 
 //GPIO actualizados
 GPIO_Handler_t switcheoUnidades= {0};  // PinB7
-GPIO_Handler_t switcheoDecenas= {0};  // PinC9
+GPIO_Handler_t switcheoDecenas= {0};   // PinC9
 GPIO_Handler_t switcheoCentenas= {0};  // PinC8
 GPIO_Handler_t switcheoMillares= {0};  // PinC5
 
 
 //Handlers GPIO
-GPIO_Handler_t LedRed = {0}; //	Pines RGB	PinB8
-GPIO_Handler_t LedGreen = {0}; //	Pines RGB	PinB9
-GPIO_Handler_t LedBlue = {0}; //	Pines RGB	PinA5
-GPIO_Handler_t pinSW = {0}; //	PinA4
-GPIO_Handler_t pinData = {0}; //	PinA1
-GPIO_Handler_t pinClock = {0}; //	PinA0
-GPIO_Handler_t pinRX = {0}; //	PinA0
-GPIO_Handler_t pinTX = {0}; //	PinA0
+GPIO_Handler_t LedRed = {0};		//	Pines RGB	PinB8
+GPIO_Handler_t LedGreen = {0};		//	Pines RGB	PinB9
+GPIO_Handler_t LedBlue = {0}; 		//	Pines RGB	PinA5
+GPIO_Handler_t pinSW = {0}; 		//	PinA4
+GPIO_Handler_t pinData = {0}; 		//	PinA1
+GPIO_Handler_t pinClock = {0};		//	PinA0
+GPIO_Handler_t pinRX = {0}; 		//	PinA0
+GPIO_Handler_t pinTX = {0}; 		//	PinA0
 
 
 
@@ -343,23 +348,18 @@ void init_system(void){
 	pinCollector.pGPIOx 							= 	GPIOA;
 	pinCollector.pinConfig.GPIO_PinNumber			=	PIN_6;
 	pinCollector.pinConfig.GPIO_PinMode				=	GPIO_MODE_ALTFN;
-	pinCollector.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
-	pinCollector.pinConfig.GPIO_PinOutputSpeed		=	GPIO_OSPEED_FAST;
-	pinCollector.pinConfig.GPIO_PinPuPdControl		=	GPIO_PUPDR_NOTHING;
-	pinCollector.pinConfig.GPIO_PinAltFunMode		= 	AF2;
+	pinCollector.pinConfig.GPIO_PinAltFunMode		=	AF2;
 
 
 	gpio_Config(&pinCollector);
 
 
 	/* pinBase */
-	pinBase.pGPIOx 							= 	GPIOA;
-	pinBase.pinConfig.GPIO_PinNumber		=	PIN_7;
-	pinBase.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
-	pinBase.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
-	pinBase.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	pinBase.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-	pinBase.pinConfig.GPIO_PinAltFunMode	= 	AF2;
+	pinBase.pGPIOx 									= 	GPIOA;
+	pinBase.pinConfig.GPIO_PinNumber				=	PIN_7;
+	pinBase.pinConfig.GPIO_PinMode					=	GPIO_MODE_ALTFN;
+	pinCollector.pinConfig.GPIO_PinAltFunMode		=	AF2;
+
 
 
 	gpio_Config(&pinBase);
@@ -434,7 +434,7 @@ void init_system(void){
 
 	display.pTIMx 								= TIM2;
 	display.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
-	display.TIMx_Config.TIMx_Period				=2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
+	display.TIMx_Config.TIMx_Period				=6;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
 	display.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	display.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
@@ -465,7 +465,7 @@ void init_system(void){
 	collector.ptrTIMx = TIM3;
 	collector.config.channel = PWM_CHANNEL_1;
 	collector.config.periodo = 1000;
-	collector.config.prescaler = 16; // freq
+	collector.config.prescaler = 100; // freq
 	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
@@ -479,7 +479,7 @@ void init_system(void){
 	base.ptrTIMx = TIM3;
 	base.config.channel = PWM_CHANNEL_2;
 	base.config.periodo = 1000;
-	base.config.prescaler = 16; // freq
+	base.config.prescaler = 100; // freq
 	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
@@ -816,6 +816,17 @@ void analizeRecievedChar(void){
 }
 
 
+// Función para calcular el promedio de un array
+uint32_t calculate_average(uint16_t array[]) {
+    uint64_t sum = 0;
+    for (int i = 0; i < ARRAY_SIZE; i++) {
+        sum += array[i];
+    }
+    uint16_t promedio = (sum / ARRAY_SIZE);
+    return promedio;
+
+}
+
 
 
 /* Función encargada de analizar los comandos percibidos por el puerto serial */
@@ -995,25 +1006,22 @@ void parseCommands(char *ptrBufferReception){
 
 	}
 
-	else if (strcmp(cmd, "readVoltB")==0){
-		usart_writeMsg(&commSerial, "Read voltage of base (mV) \n");
-		//adc_ConfigSingleChannel(&v_base);
-		//adc_StartSingleConv();
-		sprintf(bufferData, "Voltage of base: %lu mV\n", voltage_b);
-		usart_writeMsg(&commSerial, bufferData);
+	else if (strcmp(cmd, "readVoltB") == 0) {
+	    usart_writeMsg(&commSerial, "Read voltage of base (mV) \n");
 
-
+	    // Leer el valor más reciente del ADC en v_base
+	    sprintf(bufferData, "Voltage of base (AVG): %lu mV\n", calculate_average(adc_array_base));
+	    usart_writeMsg(&commSerial, bufferData);
 	}
 
-	else if (strcmp(cmd, "readVoltC")==0){
-		usart_writeMsg(&commSerial, "Read voltage of collector (mV) \n");
-		//adc_ConfigSingleChannel(&v_collector);
-		//adc_StartSingleConv();
-		sprintf(bufferData, "Voltage of collector: %lu mV\n", voltage_c);
-		usart_writeMsg(&commSerial, bufferData);
+	else if (strcmp(cmd, "readVoltC") == 0) {
+	    usart_writeMsg(&commSerial, "Read voltage of collector (mV) \n");
 
-
+	    // Leer el valor más reciente del ADC en v_collector
+	    sprintf(bufferData, "Voltage of collector (AVG): %lu mV\n", calculate_average(adc_array_collector));
+	    usart_writeMsg(&commSerial, bufferData);
 	}
+
 
 	 else{
 	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
@@ -1165,22 +1173,35 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_COMMAND_COMPLETE:{
-
+			break;
 	}
 	case STATE_READ_ADC:{
-		fsm_program.state = STATE_IDLE;
-		if(flag_adc == 0){
-					voltage_c = adc_GetValue();
-					adc_ConfigSingleChannel(&v_base);
-					flag_adc = 1;
-				}
-				else{
-					voltage_b = adc_GetValue();
-					adc_ConfigSingleChannel(&v_collector);
+		uint16_t adc_value = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
+		 if (flag_adc == 0) {
+			 	adc_array_base[index_base] = adc_value;  // Guardar valor en la posición actual
+			 	voltage_b = adc_value;
+		        adc_ConfigSingleChannel(&v_collector); // Configurar el ADC para el siguiente canal
+		        flag_adc = 1; // Cambiar al otro array en la siguiente lectura
+		        index_base ++;
+
+		        if (index_base >= 100) {
+		            index_base = 0;  // Reiniciar índice si llega a 100
+
+		        }
 
 
-					flag_adc = 0;
-				}
+		} else if(flag_adc == 1){
+			adc_array_collector[index_collector] = adc_value;  // Guardar en array correspondiente
+			voltage_c = adc_value;
+			adc_ConfigSingleChannel(&v_base); // Configurar el ADC para el siguiente canal
+			flag_adc = 0; // Cambiar de nuevo al otro array
+			index_collector ++;
+			if (index_collector >= 100) {
+				index_collector = 0;  // Reiniciar índice si llega a 100
+			}
+
+		}
+
 
 			fsm_program.state = STATE_IDLE;
 			break;
@@ -1212,7 +1233,6 @@ FSM_STATES fsm_function(uint8_t evento){
 
 void Timer2_Callback(void){
 	fsm_program.state = STATE_REFRESH_DISPLAY;
-	//adc_StartSingleConv();
 }
 
 /* este el callback del Led de estado, usamos el TooglePin para que se enciende y se apague, es la unico para loode			=	GPIO_MODE_
@@ -1245,7 +1265,6 @@ void usart6_RxCallback(void){
 
 void adc_CompleteCallback (void){
 	fsm_program.state = STATE_READ_ADC;
-	 //adc_data = adc_GetValue();
 
 }
 

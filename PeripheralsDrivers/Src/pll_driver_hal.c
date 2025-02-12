@@ -21,7 +21,7 @@ void configPLL(uint16_t freqPLL){
 	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM); // Limpiamos
 	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLM_3); // Ponemos un 8 en el PLLM
 
-	//Ahora conifugraremos la multiplicación
+	//Ahora configuraremos la multiplicacion
 	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLN); // Limpiamos
 
 	//ponemos el PLLN en 80 para conseguir 160MHz
