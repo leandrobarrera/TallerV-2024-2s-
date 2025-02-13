@@ -26,6 +26,12 @@
 
 #define PLL_STANDARD_FREQ	80
 
+typedef enum {
+    HSI_CLOCK = 0,  // High-Speed Internal (HSI) clock
+    PLL_CLOCK = 1   // Phase-Locked Loop (PLL) clock
+} ClockSource_t;
+
+
 void configPLL(uint16_t freqPLL);
 uint8_t getConfigPLL(void);
 uint16_t getFreqPLL(void);

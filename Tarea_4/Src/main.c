@@ -1023,40 +1023,41 @@ void parseCommands(char *ptrBufferReception){
 	}
 
 	else if (strcmp(cmd, "analyzeIcVb") == 0) {
-	        uint16_t vbValues[137];  // Voltajes de la base en mV
-	        uint16_t vcValues[137];  // Voltajes del colector en mV
-	        float icValues[137];     // Corriente del colector en mA
-	        uint16_t Rc = 216;       // Resistencia del colector en ohmios
-	        uint16_t Vcc = 3300;     // Voltaje de alimentación en mV (3.3V)
-	        float Is = 1e-12;        // Corriente de saturación inversa (1 pA)
-	        float Vt = 25.0;         // Voltaje térmico en mV
-	        float Vb_min = 0.5;      // Voltaje base inicial (500 mV)
-	        float Vb_max = 0.85;     // Ajustado para alcanzar Ic ≈ 13mA
-	        char bufferData[64];     // Buffer para la salida formateada
+	    uint16_t baseVoltages[137];  // Voltajes en la base (mV)
+	    uint16_t collectorVoltages[137];  // Voltajes en el colector (mV)
+	    float collectorCurrents[137];  // Corriente en el colector (mA)
+	    uint16_t resistanceC = 220;  // Resistencia del colector en ohmios
+	    uint16_t supplyVoltage = 1000;  // Voltaje de alimentación en mV
+	    float leakageCurrent = 1e-12;  // Corriente de saturación inversa (1 pA)
+	    float thermalVoltage = 25.0;  // Voltaje térmico en mV
+	    float minBaseVoltage = 0.5;  // Voltaje base mínimo (500 mV)
+	    float maxBaseVoltage = 0.85;  // Ajustado para alcanzar Ic ≈ 13mA
+	    char formattedData[64];  // Buffer para salida formateada
 
-	        usart_writeMsg(&commSerial, "Vc (mV), Vb (mV), Ic (mA)\n");
+	    usart_writeMsg(&commSerial, "Vb (mV), Vc (mV), Ic (mA)\n");
 
-	        for (int i = 0; i < 137; i++) {
-	            // Generar valores de Vb desde 500mV hasta 850mV de forma equidistante
-	            float Vbe = Vb_min + ((Vb_max - Vb_min) * (float)i / 136);
-	            vbValues[i] = (uint16_t)(Vbe * 1000); // Convertir a milivoltios
+	    for (int index = 0; index < 137; index++) {
+	        // Generar valores de Vb de forma equidistante
+	        float baseEmitterVoltage = minBaseVoltage + ((maxBaseVoltage - minBaseVoltage) * (float)index / 136);
+	        baseVoltages[index] = (uint16_t)(baseEmitterVoltage * 1000);  // Convertir a mV
 
-	            // Calcular la corriente del colector usando la ecuación exponencial
-	            icValues[i] = Is * (exp(Vbe / Vt) - 1);
-	            icValues[i] *= 1000;  // Convertir a mA
+	        // Calcular corriente del colector usando ecuación exponencial
+	        collectorCurrents[index] = leakageCurrent * (exp(baseEmitterVoltage / thermalVoltage) - 1);
+	        collectorCurrents[index] *= 1000;  // Convertir a mA
 
-	            // Simular el voltaje en el colector considerando la caída de tensión en Rc
-	            vcValues[i] = Vcc - (uint16_t)(icValues[i] * Rc);
+	        // Simular el voltaje del colector considerando caída en Rc
+	        collectorVoltages[index] = supplyVoltage - (uint16_t)(collectorCurrents[index] * resistanceC);
 
-	            // Conversión manual del float en dos partes
-	            int intPart = (int)icValues[i];
-	            int decPart = (int)roundf((icValues[i] - intPart) * 100);
+	        // Extraer parte entera y decimal de la corriente
+	        int integerPart = (int)collectorCurrents[index];
+	        int decimalPart = (int)roundf((collectorCurrents[index] - integerPart) * 100);
 
-	            // Formatear salida como CSV en formato "Vc, Vb, Ic"
-	            sprintf(bufferData, "%u, %u, %d.%02d\n", vcValues[i], vbValues[i], intPart, decPart);
-	            usart_writeMsg(&commSerial, bufferData);
-	        }
+	        // Formatear salida como CSV en formato "Vb, Vc, Ic"
+	        sprintf(formattedData, "%u, %u, %d.%02d\n", baseVoltages[index], collectorVoltages[index], integerPart, decimalPart);
+	        usart_writeMsg(&commSerial, formattedData);
 	    }
+	}
+
 
 	 else{
 	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
@@ -1208,7 +1209,7 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_COMMAND_COMPLETE:{
-
+break;
 	}
 	case STATE_READ_ADC:{
 		fsm_program.state = STATE_IDLE;
