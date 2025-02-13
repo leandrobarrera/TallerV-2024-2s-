@@ -32,5 +32,7 @@ uint16_t getFreqPLL(void);
 void configPresMCO1(uint8_t prescaler);
 void configChannelMCO1(uint8_t channel);
 void changeTrim(uint8_t newValue);
+uint8_t pllGetMainClock(void);
+
 
 #endif /* PLL_DRIVER_HAL_H_ */

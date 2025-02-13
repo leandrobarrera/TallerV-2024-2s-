@@ -150,7 +150,7 @@ FSM_STATES fsm_function(uint8_t evento);
 
 int main(void)
 {
-	//configPLL(100);
+	configPLL(100);
 	init_system();
 	config_SysTick_ms(0);
 	configMagic();
@@ -425,8 +425,8 @@ void init_system(void){
 	 */
 
 	blinkyTimer.pTIMx 								= TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period				=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_Prescaler			=10000;  //	Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period				=2500;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
 	blinkyTimer.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
@@ -439,7 +439,7 @@ void init_system(void){
 
 	display.pTIMx 								= TIM2;
 	display.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
-	display.TIMx_Config.TIMx_Period				=2;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
+	display.TIMx_Config.TIMx_Period				=4;  //	60FPS ultra calidad gamer. Se tuvo que subir porque no se veía fluido el refresco, antes era 15, que significaban 60 FPS
 	display.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	display.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
@@ -455,8 +455,8 @@ void init_system(void){
 
 	red_pwm.ptrTIMx = TIM4;
 	red_pwm.config.channel = PWM_CHANNEL_3;
-	red_pwm.config.periodo = 100;
-	red_pwm.config.prescaler = 16; // freq 10us
+	red_pwm.config.periodo = 500;
+	red_pwm.config.prescaler = 150; // freq 10us
 	red_pwm.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
 
 	/* Se carga el PWM con los parametros establecidos */
@@ -469,8 +469,8 @@ void init_system(void){
 
 	collector.ptrTIMx = TIM3;
 	collector.config.channel = PWM_CHANNEL_1;
-	collector.config.periodo = 1000;
-	collector.config.prescaler = 16; // freq
+	collector.config.periodo = 500;
+	collector.config.prescaler = 50; // freq
 	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 
@@ -483,8 +483,8 @@ void init_system(void){
 
 	base.ptrTIMx = TIM3;
 	base.config.channel = PWM_CHANNEL_2;
-	base.config.periodo = 1000;
-	base.config.prescaler = 16; // freq
+	base.config.periodo = 500;
+	base.config.prescaler = 50; // freq
 	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
 
 

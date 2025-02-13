@@ -168,6 +168,18 @@ void changeTrim(uint8_t newValue){
 }
 
 
+uint8_t pllGetMainClock(void){
+	if(RCC->CFGR & RCC_CFGR_SW_HSI){
+		return HSI_CLOCK_CONFIGURED;
+	}
+	else if(RCC->CFGR & RCC_CFGR_SW_HSE){
+		return HSE_CLOCK_CONFIGURED;
+	}
+	else if(RCC->CFGR & RCC_CFGR_SW_PLL){
+		return PLL_CLOCK_CONFIGURED;
+	}
+	return HSI_CLOCK_CONFIGURED;
+}
 
 
 
