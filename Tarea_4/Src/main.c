@@ -426,8 +426,8 @@ void init_system(void){
 	 */
 
 	blinkyTimer.pTIMx 								= TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler			=10000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period				=2500;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period				=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
 	blinkyTimer.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
