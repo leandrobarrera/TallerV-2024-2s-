@@ -9,7 +9,6 @@
 
 #include "stm32f4xx.h"
 #include "usart_driver_hal.h"
-#include "pll_driver_hal.h"
 
 uint8_t auxRxData_Usart1 = 0;
 uint8_t auxRxData_Usart2 = 0;
@@ -200,54 +199,28 @@ static void usart_config_stopbits(USART_Handler_t *ptrUsartHandler){
  * Ver tabla de valores (Tabla 73), Frec = 16MHz, overr = 0;
  */
 static void usart_config_baudrate(USART_Handler_t *ptrUsartHandler){
-	uint8_t auxMainClock = 0;
-
-	auxMainClock = pllGetMainClock();
 	// Caso para configurar cuando se trabaja con el Cristal Interno
 	switch(ptrUsartHandler->USART_Config.baudrate){
-
 		case USART_BAUDRATE_9600:
 		{
-			if(auxMainClock == PLL_CLOCK_CONFIGURED){
-
 		// El valor a cargar es 104.1875 -> Mantiza = 104,fraction = 0.1875
 		// Mantiza = 104 = 0x68, fraction = 16 * 0.1875 = 3
 		// Valor a cargar 0x0683
 		// Configurando el Baudrate generator para una velocidad de 9600bps
-		ptrUsartHandler->ptrUSARTx->BRR = 0x28B0;
-			}
-			else{
-				ptrUsartHandler->ptrUSARTx->BRR = 0x0683;
-
-			}
-			break;
+			ptrUsartHandler->ptrUSARTx->BRR = 0x0683;
+		break;
 		}
 		case USART_BAUDRATE_19200:
 		{
-			if(auxMainClock == PLL_CLOCK_CONFIGURED){
-				// El valor a cargar es 52.0625 -> Mantiza = 52,fraction = 0.0625
-					// Mantiza = 52 = 0x34, fraction = 16 * 0.1875 = 1
-						ptrUsartHandler->ptrUSARTx->BRR = 0x1458;
+		// El valor a cargar es 52.0625 -> Mantiza = 52,fraction = 0.0625
+		// Mantiza = 52 = 0x34, fraction = 16 * 0.1875 = 1
+			ptrUsartHandler->ptrUSARTx->BRR = 0x008B;
 
-			}
-			else{
-				ptrUsartHandler->ptrUSARTx->BRR = 0x0341;
-			}
-			break;
+		break;
 		}
-
-
-
 		//se hizo en el cuaderno por flojera.
-		case USART_BAUDRATE_38400:
-		{
-			if(auxMainClock == PLL_CLOCK_CONFIGURED){
-
-			ptrUsartHandler->ptrUSARTx->BRR = 0x01A1;
-			}
-			else{
-				ptrUsartHandler->ptrUSARTx->BRR = 0x08B;
-			}
+		case USART_BAUDRATE_38400:{
+			ptrUsartHandler->ptrUSARTx->BRR = 0x0045;
 		break;
 
 		}
@@ -255,17 +228,12 @@ static void usart_config_baudrate(USART_Handler_t *ptrUsartHandler){
 
 		case USART_BAUDRATE_115200:
 		{
-			if(auxMainClock == PLL_CLOCK_CONFIGURED){
-
          // El valor a cargar es 8.6875 -> Mantiza = 8,fraction = 0.6875
 		// Mantiza = 8 = 0x8, fraction = 16 * 0.6875 = 11
 		// Valor a cargar 0x8B
 		// Configurando el Baudrate generator para una velocidad de 115200bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x0364;
-			} else{
+			ptrUsartHandler->ptrUSARTx->BRR = 0x08B;
 
-				ptrUsartHandler->ptrUSARTx->BRR = 0x045;
-			}
 			break;
 		}
 		case USART_BAUDRATE_230400:
@@ -485,4 +453,3 @@ __attribute__((weak)) void usart6_RxCallback(void){
 	   */
 	__NOP();
 }
-

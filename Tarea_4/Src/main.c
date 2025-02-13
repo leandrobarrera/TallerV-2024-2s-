@@ -150,7 +150,7 @@ FSM_STATES fsm_function(uint8_t evento);
 
 int main(void)
 {
-	configPLL(100);
+	//configPLL(100);
 	init_system();
 	config_SysTick_ms(0);
 	configMagic();
