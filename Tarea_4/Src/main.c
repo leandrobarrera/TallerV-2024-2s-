@@ -21,6 +21,7 @@
 #include "pwm_driver_hal.h"
 #include "usart_driver_hal.h"
 #include "adc_driver_hal.h"
+#include <math.h>
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
 #define ARRAY_SIZE 100  // 100 muestras por array
@@ -845,6 +846,7 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "9) setVoltC # -- PWM-DAC output for collector (mV)\n");
         usart_writeMsg(&commSerial, "10) readVoltB # -- ADC value for base (mV)\n");
         usart_writeMsg(&commSerial, "11) readVoltC # -- ADC value for collector (mV)\n");
+        usart_writeMsg(&commSerial, "12) analyzeIcVb # -- Curva Ic vs Vb (mV)\n");
     }
 
     // El comando dummy sirve para entender como funciona la recepción de números enviados
@@ -1019,6 +1021,42 @@ void parseCommands(char *ptrBufferReception){
 
 
 	}
+
+	else if (strcmp(cmd, "analyzeIcVb") == 0) {
+	        uint16_t vbValues[137];  // Voltajes de la base en mV
+	        uint16_t vcValues[137];  // Voltajes del colector en mV
+	        float icValues[137];     // Corriente del colector en mA
+	        uint16_t Rc = 216;       // Resistencia del colector en ohmios
+	        uint16_t Vcc = 3300;     // Voltaje de alimentación en mV (3.3V)
+	        float Is = 1e-12;        // Corriente de saturación inversa (1 pA)
+	        float Vt = 25.0;         // Voltaje térmico en mV
+	        float Vb_min = 0.5;      // Voltaje base inicial (500 mV)
+	        float Vb_max = 0.85;     // Ajustado para alcanzar Ic ≈ 13mA
+	        char bufferData[64];     // Buffer para la salida formateada
+
+	        usart_writeMsg(&commSerial, "Vc (mV), Vb (mV), Ic (mA)\n");
+
+	        for (int i = 0; i < 137; i++) {
+	            // Generar valores de Vb desde 500mV hasta 850mV de forma equidistante
+	            float Vbe = Vb_min + ((Vb_max - Vb_min) * (float)i / 136);
+	            vbValues[i] = (uint16_t)(Vbe * 1000); // Convertir a milivoltios
+
+	            // Calcular la corriente del colector usando la ecuación exponencial
+	            icValues[i] = Is * (exp(Vbe / Vt) - 1);
+	            icValues[i] *= 1000;  // Convertir a mA
+
+	            // Simular el voltaje en el colector considerando la caída de tensión en Rc
+	            vcValues[i] = Vcc - (uint16_t)(icValues[i] * Rc);
+
+	            // Conversión manual del float en dos partes
+	            int intPart = (int)icValues[i];
+	            int decPart = (int)roundf((icValues[i] - intPart) * 100);
+
+	            // Formatear salida como CSV en formato "Vc, Vb, Ic"
+	            sprintf(bufferData, "%u, %u, %d.%02d\n", vcValues[i], vbValues[i], intPart, decPart);
+	            usart_writeMsg(&commSerial, bufferData);
+	        }
+	    }
 
 	 else{
 	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
