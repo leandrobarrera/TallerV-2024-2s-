@@ -26,6 +26,7 @@
 #include "usart_driver_hal.h"
 #include "adc_driver_hal.h"
 #include "i2c_driver_hal.h"
+#include "oled_driver.h"
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
 
@@ -48,7 +49,7 @@ uint16_t siete_segmentos = 0;	//variable para almacenar el valor del 7segmentos
 uint8_t caso_transistor = 0;	//variable para hacer switcheo de los transistores, el de unidades por decena y viceversa
 uint8_t unidades = 0;			//variable para almacenar el dato de la unidad
 uint8_t decenas = 0;			//variable para almacenar el dato de la decena
-uint8_t flag_usart = 0;			//bandera para el usart
+uint8_t flag_adc = 0;			//bandera para el usart
 uint8_t contador = 0;			//variable para contar
 uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
 uint16_t valX = 0;				//valor adc del pinX
@@ -98,6 +99,15 @@ Timer_Handler_t blinkyTimer = {0};
 Timer_Handler_t display = {0};
 Timer_Handler_t contador_segundos = {0};
 
+//Handlers para OLED
+GPIO_Handler_t pinSda = { 0 };
+GPIO_Handler_t pinScl = { 0 };
+I2C_Handler_t oled = { 0 };
+
+// Definimos las posiciones fijas de los tres cuadrados
+#define POS1 24   // Cuadrado izquierdo
+#define POS2 56   // Cuadrado central
+#define POS3 88   // Cuadrado derecho
 
 
 //Maquina de estados finito :D
@@ -121,18 +131,27 @@ void switcheo_transistor (uint8_t choose);		//funcion para encender los transist
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
 void refresh (void);							//funcion para el constante refresco de el display
 void reducir_tiempo(void);						//funcion para contar hacia atras cada 1 seg
+void drawPixel (I2C_Handler_t *ptrHandlerI2C, uint8_t x, uint8_t y);
+void animateRandomSquares(I2C_Handler_t *ptrHandlerI2Ctr);
+void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
+void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);;
 
 int main(void)
 {
 	init_system();								//Inicio de todas las configuraciones
-	config_SysTick_ms(0);
+	startOLED(&oled);
+	clearDisplay(&oled);
 	configMagic();								//Configuracion del Magic
+	drawLineOnPage6(&oled);
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
+
+	void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
 
 
 	while(1){
 
 		fsm_function(fsm_program.state);
+
 
 
 		}
@@ -157,8 +176,8 @@ void init_system(void){
 	gpio_WritePin(&userLed, SET);
 
 	/*	PinX	*/
-	pinX.pGPIOx 						= 	GPIOA;
-	pinX.pinConfig.GPIO_PinNumber		=	PIN_1;
+	pinX.pGPIOx 						= 	GPIOC;
+	pinX.pinConfig.GPIO_PinNumber		=	PIN_8;
 	pinX.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinX.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	pinX.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -170,8 +189,8 @@ void init_system(void){
 	gpio_WritePin(&pinX, SET);
 
 	/*	PinY	*/
-	pinY.pGPIOx 						= 	GPIOA;
-	pinY.pinConfig.GPIO_PinNumber		=	PIN_1;
+	pinY.pGPIOx 						= 	GPIOC;
+	pinY.pinConfig.GPIO_PinNumber		=	PIN_5;
 	pinY.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinY.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	pinY.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -398,12 +417,40 @@ void init_system(void){
 	commSerial.USART_Config.mode 		= USART_MODE_RXTX;
 	commSerial.USART_Config.enableIntRX = USART_RX_INTERRUP_ENABLE;
 
+
 	/* Escribimos la configuracion en la memoria del MCU */
 	usart_Config(&commSerial);
 
 	usart_WriteChar(&commSerial, '\0');
 
+	pinScl.pGPIOx = GPIOB;
+	pinScl.pinConfig.GPIO_PinNumber 			= PIN_10;
+	pinScl.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
+	pinScl.pinConfig.GPIO_PinOutputSpeed		= GPIO_OSPEED_MEDIUM;
+	pinScl.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
+	pinScl.pinConfig.GPIO_PinPuPdControl 		= GPIO_PUPDR_NOTHING;
+	pinScl.pinConfig.GPIO_PinAltFunMode 		= AF4;
 
+	gpio_Config(&pinScl);
+
+	pinSda.pGPIOx = GPIOB;
+	pinSda.pinConfig.GPIO_PinNumber 			= PIN_3;
+	pinSda.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
+	pinSda.pinConfig.GPIO_PinOutputSpeed 		= GPIO_OSPEED_MEDIUM;
+	pinSda.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
+	pinSda.pinConfig.GPIO_PinPuPdControl 		= GPIO_PUPDR_NOTHING;
+	pinSda.pinConfig.GPIO_PinAltFunMode 		= AF9;
+
+	gpio_Config(&pinSda);
+
+	oled.pI2Cx = I2C2;
+	oled.i2c_mode = I2C_MODE_SM_SPEED;
+	oled.i2c_mainClock = I2C_MAIN_CLOCK_16_Mhz;
+	oled.slaveAddress = 0x3C;
+
+	i2c_Config(&oled);
+
+	config_SysTick_ms(0);
 
 
 
@@ -597,37 +644,29 @@ void reducir_tiempo(void){
 
 void lecturaXY(void){
 
-	switch(switcheo){
+	adc_StartSingleConv();
+	systick_Delay_ms(10);
+	valX = adc_GetValue();
+	systick_Delay_ms(5);
 
-	case 0:{
 
-		adc_StartSingleConv();
-		valX = adc_data;
-		break;
+	gpio_WritePin(&pinX, 0);
+	gpio_WritePin(&pinY, 1);
+	systick_Delay_ms(5);
 
-	}
-	case 1:{
 
-		adc_StartSingleConv();
-		valY = adc_data;
-		break;
-	}
-	}
+	adc_StartSingleConv();
+	systick_Delay_ms(10);
+	valY = adc_GetValue();
+	systick_Delay_ms(5);
 
-	if(switcheo == 0){
 
-		switcheo = 1;
+	gpio_WritePin(&pinX, 1);
+	gpio_WritePin(&pinY, 0);
+	systick_Delay_ms(5);
 
-	}
+	flag_adc = 0;
 
-	else{
-
-		switcheo = 0;
-
-	}
-
-	gpio_TooglePin(&pinX);
-	gpio_TooglePin(&pinY);
 
 }
 
@@ -659,7 +698,43 @@ void procesar_coordenadas(void){
 			}
 }
 
+//void drawPixel (I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y){
+//	uint8_t page = y/8;
+//	uint8_t bit_position = y%8;
+//	//uint8_t pixelData = 1 << bit_position;
+//	char lineBytes[128] = { 0xFF };
+//
+//	setPage(ptrHandlerI2Ctr, page);
+//	setColumnAddress(ptrHandlerI2Ctr, x);
+//
+//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 1);
+//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 10);
+//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 20);
+//}
 
+void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
+	char emptyPage[128] = { 0 };  // Página vacía (todos los píxeles apagados)
+
+	// Borrar todas las páginas de la pantalla
+	for (uint8_t page = 0; page < 8; page++) {
+		setPage(ptrHandlerI2Ctr, page);
+		setColumnAddress(ptrHandlerI2Ctr, 0); // Comenzar desde la primera columna
+		sendDataBytes(ptrHandlerI2Ctr, emptyPage, 128); // Enviar una página vacía
+	}
+}
+
+
+
+void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
+	char lineBytes[128] = { 0xFF }; // Inicializar el arreglo con 0xFF para encender todos los píxeles
+
+	// Establecer la página 6
+	setPage(ptrHandlerI2Ctr, 6);
+	setColumnAddress(ptrHandlerI2Ctr, 0);  // Comenzar desde la columna 0
+
+	// Enviar la línea a la página 6
+	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 128);
+}
 
 
 
@@ -691,8 +766,7 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_JOYSTICK_MOVE:{
-		lecturaXY();
-		adc_data = adc_GetValue();
+
 
 
 		fsm_program.state = STATE_IDLE;
@@ -702,6 +776,11 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_TIEMPO:{
 		refresh();
+
+		if(flag_adc == 1){
+			lecturaXY();
+		}
+
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -754,6 +833,8 @@ void Timer3_Callback(void){
  Ademas de eso, agregamos la bandera para que se de la conversion de adc y la inicializacion de la variable sendMsg*/
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
+	flag_adc = 1;
+	//drawPixel (&oled,50, 50);
 
 }
 
