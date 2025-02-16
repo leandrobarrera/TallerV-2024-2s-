@@ -92,7 +92,7 @@ GPIO_Handler_t switcheoDecenas = {0};
 ADC_Config_t joystick = {0};  //		Channel0: PinA0
 
 
-
+char coord[8][128] = {0};
 
 
 //Handlers para los timers
@@ -136,7 +136,9 @@ void reducir_tiempo(void);						//funcion para contar hacia atras cada 1 seg
 void drawPixel (I2C_Handler_t *ptrHandlerI2C, uint8_t x, uint8_t y);
 void animateRandomSquares(I2C_Handler_t *ptrHandlerI2Ctr);
 void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
-void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);;
+void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
+void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
+uint8_t transformX(uint8_t x);
 
 int main(void)
 {
@@ -144,8 +146,37 @@ int main(void)
 	startOLED(&oled);
 	clearDisplay(&oled);
 	configMagic();								//Configuracion del Magic
-	drawLineOnPage6(&oled);
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
+	//drawLineOnPage6(&oled);
+	systick_Delay_ms(1000);
+
+	//clearScreen(&oled);
+	//systick_Delay_ms(1000);
+
+	for(int i = 0 ; i<64 ; i++){
+
+		drawPixel2(&oled,i,64);
+		systick_Delay_ms(10);
+	}
+	for(int i = 0 ; i<64 ; i++){
+
+		drawPixel2(&oled,i,66);
+		systick_Delay_ms(10);
+	}
+	for(int i = 0 ; i<128 ; i++){
+
+		drawPixel2(&oled,32,i);
+		systick_Delay_ms(10);
+	}
+//	for(int i = 0 ; i<64 ; i++){
+//
+//		drawPixel2(&oled,i,66);
+//		systick_Delay_ms(100);
+//	}
+
+
+
+
 
 	void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
 
@@ -700,19 +731,95 @@ void procesar_coordenadas(void){
 			}
 }
 
-//void drawPixel (I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y){
-//	uint8_t page = y/8;
-//	uint8_t bit_position = y%8;
-//	//uint8_t pixelData = 1 << bit_position;
-//	char lineBytes[128] = { 0xFF };
-//
-//	setPage(ptrHandlerI2Ctr, page);
-//	setColumnAddress(ptrHandlerI2Ctr, x);
-//
-//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 1);
-//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 10);
-//	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 20);
-//}
+void drawPixel (I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y){
+	uint8_t page = y/8;
+	uint8_t bit_position = y%8;
+	uint8_t pixelData = 1 << bit_position;
+
+	char dataToSend = (char) pixelData;
+
+	setPage(ptrHandlerI2Ctr, page);
+	setColumnAddress(ptrHandlerI2Ctr, x);
+
+	sendDataBytes(ptrHandlerI2Ctr, &dataToSend, 1);
+}
+
+void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
+	//char coord[8][128] = {0}; // 8 páginas (filas), 128 columnas
+
+
+
+	if(x >= 1 && x <= 8){
+		uint8_t auxpage1 = coord[0][y] |= (1 << transformX(x));
+		coord[0][y] = auxpage1;
+	}
+	if(x > 8 && x <= 16){
+		uint8_t auxpage1 = coord[1][y] |= (1 << transformX(x));
+		coord[1][y] = auxpage1;
+	}
+	if(x > 16 && x <= 24){
+		uint8_t auxpage1 = coord[2][y] |= (1 << transformX(x));
+		coord[2][y] = auxpage1;
+	}
+	if(x > 24 && x <= 32){
+		uint8_t auxpage1 = coord[3][y] |= (1 << transformX(x));
+		coord[3][y] = auxpage1;
+	}
+	if(x > 32 && x <= 40){
+		uint8_t auxpage1 = coord[4][y] |= (1 << transformX(x));
+		coord[4][y] = auxpage1;
+	}
+	if(x > 40 && x <= 48){
+		uint8_t auxpage1 = coord[5][y] |= (1 << transformX(x));
+		coord[5][y] = auxpage1;
+	}
+	if(x > 48 && x <= 56){
+		uint8_t auxpage1 = coord[6][y] |= (1 << transformX(x));
+		coord[6][y] = auxpage1;
+	}
+	if(x > 56 && x <= 64){
+		uint8_t auxpage1 = coord[7][y] |= (1 << transformX(x));
+		coord[7][y] = auxpage1;
+	}
+
+	    // coordenadas
+	    for (int page = 0; page < 8; page++) {
+	        setPage(ptrHandlerI2Ctr, page);
+	        setColumnAddress(ptrHandlerI2Ctr, 0);
+	        sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
+	    }
+}
+
+uint8_t transformX(uint8_t x){
+
+	if(x%8 == 1%8){
+		return 0;
+	}
+	if(x%8 == 2%8){
+		return 1;
+	}
+	if(x%8 == 3%8){
+		return 2;
+	}
+	if(x%8 == 4%8){
+		return 3;
+	}
+	if(x%8 == 5%8){
+		return 4;
+	}
+	if(x%8 == 6%8){
+		return 5;
+	}
+	if(x%8 == 7%8){
+		return 6;
+	}
+	if(x%8 == 8%8){
+		return 7;
+	}
+
+}
+
+
 
 void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 	char emptyPage[128] = { 0 };  // Página vacía (todos los píxeles apagados)
@@ -730,15 +837,28 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
 	char maze[8][128] = {0}; // 8 páginas (filas), 128 columnas
 
-	    // Definir un laberinto estático (1 = pared, 0 = camino)
-	    // Cada byte representa 8 píxeles en una columna
-	    for (int col = 0; col < 128; col++) {
-	        if (col % 16 == 0 || col % 16 == 15) {
-	            for (int page = 0; page < 8; page++) {
-	                maze[page][col] = 0xFF; // Paredes verticales
-	            }
+	// Definir un laberinto estático (1 = pared, 0 = camino)
+	// Cada byte representa 8 píxeles en una columna
+	for (int col = 0; col < 128; col++) {
+	    if (col % 16 == 0 || col % 16 == 15) { // Paredes verticales
+	        for (int page = 0; page < 8; page++) {
+	            maze[page][col] = 0xFF;
+	        }
+	    } else {
+	        for (int page = 0; page < 8; page++) {
+	            maze[page][col] = 0x00; // Limpia el resto del laberinto
 	        }
 	    }
+	}
+
+	// Agregar paredes horizontales con aberturas
+	for (int page = 2; page < 8; page += 2) { // Controla la separación de las paredes
+	    for (int col = 0; col < 128; col++) {
+	        if (col % 32 < 24) { // Controla los huecos horizontales
+	            maze[page][col] = 0xF0; // Usa solo la mitad superior de la celda
+	        }
+	    }
+	}
 
 	    // Crear pasadizos
 	    maze[1][0] = 0x00; // Entrada
