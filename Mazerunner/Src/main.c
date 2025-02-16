@@ -29,6 +29,8 @@
 #include "oled_driver.h"
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
+#define WIDTH 128
+#define HEIGHT 64
 
 //Handlers GPIO, para los pines. Lo de toda la vida.
 GPIO_Handler_t userLed = {0}; 	//	PinH1
@@ -726,14 +728,28 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 
 
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
-	char lineBytes[128] = { 0xFF }; // Inicializar el arreglo con 0xFF para encender todos los píxeles
+	char maze[8][128] = {0}; // 8 páginas (filas), 128 columnas
 
-	// Establecer la página 6
-	setPage(ptrHandlerI2Ctr, 6);
-	setColumnAddress(ptrHandlerI2Ctr, 0);  // Comenzar desde la columna 0
+	    // Definir un laberinto estático (1 = pared, 0 = camino)
+	    // Cada byte representa 8 píxeles en una columna
+	    for (int col = 0; col < 128; col++) {
+	        if (col % 16 == 0 || col % 16 == 15) {
+	            for (int page = 0; page < 8; page++) {
+	                maze[page][col] = 0xFF; // Paredes verticales
+	            }
+	        }
+	    }
 
-	// Enviar la línea a la página 6
-	sendDataBytes(ptrHandlerI2Ctr, lineBytes, 128);
+	    // Crear pasadizos
+	    maze[1][0] = 0x00; // Entrada
+	    maze[6][127] = 0x00; // Salida
+
+	    // Dibujar el laberinto en la OLED
+	    for (int page = 0; page < 8; page++) {
+	        setPage(ptrHandlerI2Ctr, page);
+	        setColumnAddress(ptrHandlerI2Ctr, 0);
+	        sendDataBytes(ptrHandlerI2Ctr, maze[page], 128);
+	    }
 }
 
 
