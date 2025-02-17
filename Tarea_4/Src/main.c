@@ -101,7 +101,7 @@ GPIO_Handler_t pinData = {0}; //	PinA1
 GPIO_Handler_t pinClock = {0}; //	PinA0
 GPIO_Handler_t pinRX = {0}; //	PinA0
 GPIO_Handler_t pinTX = {0}; //	PinA0
-
+GPIO_Handler_t MCO = {0};
 
 
 
@@ -151,7 +151,7 @@ FSM_STATES fsm_function(uint8_t evento);
 
 int main(void)
 {
-	//configPLL(100);
+	//configPLL(16);
 	init_system();
 	config_SysTick_ms(0);
 	configMagic();
@@ -371,7 +371,17 @@ void init_system(void){
 	gpio_Config(&pinBase);
 
 
+	/* MCO2pin */
+	MCO.pGPIOx 								= 	GPIOA;
+	MCO.pinConfig.GPIO_PinNumber			=	PIN_8;
+	MCO.pinConfig.GPIO_PinMode				=	GPIO_MODE_ALTFN;
+	MCO.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
+	MCO.pinConfig.GPIO_PinOutputSpeed		=	GPIO_OSPEED_FAST;
+	MCO.pinConfig.GPIO_PinPuPdControl		=	GPIO_PUPDR_NOTHING;
+	MCO.pinConfig.GPIO_PinAltFunMode		= 	AF0;
 
+
+	gpio_Config(&MCO);
 
 
 	//GPIOS del exti, recordar que se usan en modo input.

@@ -93,7 +93,7 @@ ADC_Config_t joystick = {0};  //		Channel0: PinA0
 
 
 char coord[8][128] = {0};
-
+uint8_t maze_matrix[64][128] = {0}; // Debes llenar esta matriz con los datos procesados de la imagen
 
 //Handlers para los timers
 
@@ -139,6 +139,7 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
+void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr);
 
 int main(void)
 {
@@ -153,21 +154,23 @@ int main(void)
 	//clearScreen(&oled);
 	//systick_Delay_ms(1000);
 
-	for(int i = 0 ; i<64 ; i++){
+	drawMaze(&oled);
 
-		drawPixel2(&oled,i,64);
-		systick_Delay_ms(10);
-	}
-	for(int i = 0 ; i<64 ; i++){
-
-		drawPixel2(&oled,i,66);
-		systick_Delay_ms(10);
-	}
-	for(int i = 0 ; i<128 ; i++){
-
-		drawPixel2(&oled,32,i);
-		systick_Delay_ms(10);
-	}
+//	for(int i = 0 ; i<64 ; i++){
+//
+//		drawPixel2(&oled,i,64);
+//		systick_Delay_ms(10);
+//	}
+//	for(int i = 0 ; i<64 ; i++){
+//
+//		drawPixel2(&oled,i,66);
+//		systick_Delay_ms(10);
+//	}
+//	for(int i = 0 ; i<128 ; i++){
+//
+//		drawPixel2(&oled,32,i);
+//		systick_Delay_ms(10);
+//	}
 //	for(int i = 0 ; i<64 ; i++){
 //
 //		drawPixel2(&oled,i,66);
@@ -873,8 +876,47 @@ void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
 }
 
 
+void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr) {
+    // Recorrer la matriz del laberinto y dibujar las paredes
+    for (int y = 0; y < 64; y++) { // Recorrer las filas
+        for (int x = 0; x < 128; x++) { // Recorrer las columnas
+            if (maze_matrix[y][x] == 1) { // Si el píxel es una pared (negro)
+                // Transformar las coordenadas y dibujar el píxel en la matriz global coord
+                if (x >= 1 && x <= 8) {
+                    coord[0][y] |= (1 << transformX(x));
+                }
+                if (x > 8 && x <= 16) {
+                    coord[1][y] |= (1 << transformX(x));
+                }
+                if (x > 16 && x <= 24) {
+                    coord[2][y] |= (1 << transformX(x));
+                }
+                if (x > 24 && x <= 32) {
+                    coord[3][y] |= (1 << transformX(x));
+                }
+                if (x > 32 && x <= 40) {
+                    coord[4][y] |= (1 << transformX(x));
+                }
+                if (x > 40 && x <= 48) {
+                    coord[5][y] |= (1 << transformX(x));
+                }
+                if (x > 48 && x <= 56) {
+                    coord[6][y] |= (1 << transformX(x));
+                }
+                if (x > 56 && x <= 64) {
+                    coord[7][y] |= (1 << transformX(x));
+                }
+            }
+        }
+    }
 
-
+    // Dibujar el laberinto en la pantalla OLED
+    for (int page = 0; page < 8; page++) {
+        setPage(ptrHandlerI2Ctr, page);
+        setColumnAddress(ptrHandlerI2Ctr, 0);
+        sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
+    }
+}
 
 // apagar, configurar nuevamente, cambiar el canal. Pin de entrada
 
