@@ -145,17 +145,20 @@ void separador_numero (uint16_t valor);			//funcion para la creacion del numero 
 void giro (void);
 void refresh (void);
 extern void configMagic(void);
+void configPresMCO1(uint8_t prescaler);
+
 FSM_STATES fsm_function(uint8_t evento);
 
 
 
 int main(void)
 {
-	//configPLL(16);
+	//configPLL(100);
 	init_system();
 	config_SysTick_ms(0);
 	configMagic();
-
+	//configChannelMCO1(0b11);
+	//configPresMCO1(MCO1_PRESCALER_DIV_5);
 
 
 	//Configurando el Systick
