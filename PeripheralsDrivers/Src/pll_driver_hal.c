@@ -135,7 +135,12 @@ uint16_t getFreqPLL(void){
 
 	default:
 	case HSI_CLOCK_CONFIGURED:
-		return 16;
+		return 16;oid configChannelMCO1(uint8_t channel){
+			//limpiamos
+			RCC->CFGR &= ~(0b11<<RCC_CFGR_MCO1_Pos);
+			//colocamos el valor
+			RCC->CFGR |= (channel<<RCC_CFGR_MCO1_Pos);
+		}
 		break;
 
 	case PLL_CLOCK_CONFIGURED:
@@ -151,6 +156,7 @@ void configPresMCO1(uint8_t prescaler){
 	RCC->CFGR &= ~(0b111<<RCC_CFGR_MCO1PRE_Pos);
 	//colocamos el valor
 	RCC->CFGR |= (prescaler<<RCC_CFGR_MCO1PRE_Pos);
+
 }
 
 void configChannelMCO1(uint8_t channel){
