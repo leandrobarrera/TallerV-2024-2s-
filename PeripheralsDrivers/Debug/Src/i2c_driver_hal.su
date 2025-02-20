@@ -24,3 +24,4 @@
 ../Src/i2c_driver_hal.c:510:7:i2c_SendMemoryAddress	16	static,ignoring_inline_asm
 ../Src/i2c_driver_hal.c:525:7:i2c_SendDataByte	16	static,ignoring_inline_asm
 ../Src/i2c_driver_hal.c:540:7:i2c_StopTransaction	16	static
+../Src/i2c_driver_hal.c:544:7:i2c_WriteSingle	16	static

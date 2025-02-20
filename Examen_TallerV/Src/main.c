@@ -23,10 +23,12 @@
 #include "adc_driver_hal.h"
 #include "i2c_driver_hal.h"
 #include "rtc_driver_hal.h"
+#include "lcd_driver.h"
 #include <math.h>
 #define HSI_CLOCK_CONFIGURED				0				// 16 MHz
 #define BUFFER_SIZE 						64
 #define ARRAY_SIZE 100  // 100 muestras por array
+#define LCD_ADDRESS 0b00100010
 
 //Handlers GPIO, para los pines. Lo de toda la vida.
 GPIO_Handler_t userLed = {0}; 	//	PinH1
@@ -135,8 +137,7 @@ ADC_Config_t v_collector = {0};
 //Handlers para OLED
 GPIO_Handler_t pinSda = { 0 };
 GPIO_Handler_t pinScl = { 0 };
-I2C_Handler_t rtc = { 0 };
-
+I2C_Handler_t lcd = {0};
 
 
 /*
@@ -154,6 +155,7 @@ void refresh (void);
 extern void configMagic(void);
 void configPresMCO1(uint8_t prescaler);
 
+
 FSM_STATES fsm_function(uint8_t evento);
 
 
@@ -161,23 +163,35 @@ FSM_STATES fsm_function(uint8_t evento);
 int main(void)
 {
 	configPLL(100);
+	config_SysTick_ms(2);
 	init_system();
-	config_SysTick_ms(0);
+	//config_SysTick_ms(0);
 	configMagic();
 	configChannelMCO1(0b11);
 	configPresMCO1(MCO1_PRESCALER_DIV_5);
+
 	config_RTC();
 	setSegundos(10);
 	setHour(8) ;
 	setMinutes(48);
 
-	//Configurando el Systick
-	config_SysTick_ms(HSI_CLOCK_CONFIGURED);
+	lcd_cursor_blinky_Enable(&lcd);
+	systick_Delay_ms(1000);
+	lcd_clear(&lcd);
+	systick_Delay_ms(1000);
+	lcd_putc(&lcd, "Taller V va a acabar");
+	lcd_gotoxy(&lcd, 1, 0);
+	lcd_clear(&lcd);
+	lcd_putc(&lcd, "que mas quieres");
+	systick_Delay_ms(100);
+	lcd_cursor_blinky_Disabled(&lcd);
+
+
+
 
 	while(1){
-
-		fsm_function(fsm_program.state);
 		valor_segundos = getSegundos();
+		fsm_function(fsm_program.state);
 
 		}
 
@@ -417,12 +431,14 @@ void init_system(void){
 
 	gpio_Config(&pinSda);
 
-	rtc.pI2Cx = I2C2;
-	rtc.i2c_mode = I2C_MODE_SM_SPEED;
-	rtc.i2c_mainClock = I2C_MAIN_CLOCK_16_Mhz;
-	rtc.slaveAddress = 0x3C;
 
-	i2c_Config(&rtc);
+
+	lcd.pI2Cx											= I2C2;
+	lcd.i2c_mode										= I2C_MODE_SM_SPEED;
+	lcd.slaveAddress					       			= LCD_ADDRESS;
+	i2c_Config(&lcd);
+	lcd_init(&lcd);
+
 
 
 	//GPIOS del exti, recordar que se usan en modo input.
@@ -449,7 +465,7 @@ void init_system(void){
 	/*	GPIO del pinClock */
 	pinClock.pGPIOx 						= 	GPIOA;
 	pinClock.pinConfig.GPIO_PinNumber		=	PIN_0;
-	pinClock.pinConfig.GPIO_PinMode		=	GPIO_MODE_IN;
+	pinClock.pinConfig.GPIO_PinMode			=	GPIO_MODE_IN;
 
 	gpio_Config(&pinClock);
 

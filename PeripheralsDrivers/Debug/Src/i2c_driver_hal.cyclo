@@ -24,3 +24,4 @@
 ../Src/i2c_driver_hal.c:510:7:i2c_SendMemoryAddress	2
 ../Src/i2c_driver_hal.c:525:7:i2c_SendDataByte	2
 ../Src/i2c_driver_hal.c:540:7:i2c_StopTransaction	1
+../Src/i2c_driver_hal.c:544:7:i2c_WriteSingle	1

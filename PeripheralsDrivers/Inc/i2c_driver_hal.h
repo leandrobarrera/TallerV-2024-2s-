@@ -55,7 +55,7 @@ enum{
  void i2c_SendMemoryAddress(I2C_Handler_t *ptrHandlerI2C, uint8_t memAddress);
  void i2c_SendDataByte(I2C_Handler_t *ptrHandlerI2C, uint8_t dataToWrite);
  void i2c_StopTransaction(I2C_Handler_t *ptrHandlerI2C);
-
+ void i2c_WriteSingle(I2C_Handler_t *ptrHandlerI2C, uint8_t newValue);
 
 
 
