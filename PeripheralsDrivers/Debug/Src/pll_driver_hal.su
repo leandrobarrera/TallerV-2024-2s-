@@ -2,6 +2,6 @@
 ../Src/pll_driver_hal.c:103:9:getConfigPLL	16	static
 ../Src/pll_driver_hal.c:131:10:getFreqPLL	8	static
 ../Src/pll_driver_hal.c:149:6:configPresMCO1	16	static
-../Src/pll_driver_hal.c:156:6:configChannelMCO1	16	static
-../Src/pll_driver_hal.c:163:6:changeTrim	16	static
-../Src/pll_driver_hal.c:171:9:pllGetMainClock	4	static
+../Src/pll_driver_hal.c:157:6:configChannelMCO1	16	static
+../Src/pll_driver_hal.c:164:6:changeTrim	16	static
+../Src/pll_driver_hal.c:172:9:pllGetMainClock	4	static

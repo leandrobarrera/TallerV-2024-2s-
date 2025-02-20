@@ -5,6 +5,7 @@
 "./Src/oled_driver.o"
 "./Src/pll_driver_hal.o"
 "./Src/pwm_driver_hal.o"
+"./Src/rtc_driver_hal.o"
 "./Src/systick_driver_hal.o"
 "./Src/timer_driver_hal.o"
 "./Src/usart_driver_hal.o"
