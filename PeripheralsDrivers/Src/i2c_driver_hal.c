@@ -28,8 +28,7 @@ static void i2c_send_memory_address(I2C_Handler_t *pHandlerI2C, uint8_t memAddr)
 static void i2c_send_close_comm(I2C_Handler_t *pHandlerI2C);
 static void i2c_send_byte(I2C_Handler_t *pHandlerI2C, uint8_t dataToWrite);
 static uint8_t i2c_read_byte(I2C_Handler_t *pHandlerI2C);
-
-
+void i2c_WriteSingle(I2C_Handler_t *ptrHandlerI2C, uint8_t newValue);
 
 //static void i2c_config_interrupt(I2C_Handler_t *pHandlerI2C);
 

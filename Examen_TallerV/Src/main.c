@@ -178,8 +178,83 @@ int main(void)
 
 	lcd_cursor_blinky_Enable(&lcd);
 	lcd_putc(&lcd, "si funciona");
-	systick_Delay_ms(2000);
+	systick_Delay_ms(500);
 	lcd_clear(&lcd);
+
+	lcd_gotoxy(&lcd, 0, 0);
+	systick_Delay_ms(1000);
+	lcd_gotoxy(&lcd, 0, 0x01);
+	systick_Delay_ms(500);
+
+	lcd_gotoxy(&lcd, 0, 0x10);
+	systick_Delay_ms(1000);
+	lcd_gotoxy(&lcd, 0, 0x11);
+	systick_Delay_ms(500);
+
+	lcd_gotoxy(&lcd, 0, 0x12);
+		systick_Delay_ms(1000);
+		lcd_gotoxy(&lcd, 0, 0x13);
+		systick_Delay_ms(500);
+
+		lcd_gotoxy(&lcd, 0, 0x14);
+			systick_Delay_ms(1000);
+			lcd_gotoxy(&lcd, 0, 0x15);
+			systick_Delay_ms(500);
+
+			lcd_gotoxy(&lcd, 0, 0x16);
+					systick_Delay_ms(1000);
+					lcd_gotoxy(&lcd, 0, 0x17);
+					systick_Delay_ms(500);
+
+					lcd_gotoxy(&lcd, 0, 0x18);
+						systick_Delay_ms(1000);
+						lcd_gotoxy(&lcd, 0, 0x19);
+						systick_Delay_ms(500);
+
+						lcd_gotoxy(&lcd, 1, 0);
+							systick_Delay_ms(1000);
+							lcd_gotoxy(&lcd, 1, 0x01);
+							systick_Delay_ms(500);
+
+							lcd_gotoxy(&lcd, 1, 0x10);
+							systick_Delay_ms(1000);
+							lcd_gotoxy(&lcd, 1, 0x11);
+							systick_Delay_ms(500);
+
+
+//	lcd_gotoxy(&lcd, 1, 0x14);
+//	systick_Delay_ms(1000);
+//	lcd_gotoxy(&lcd, 1, 0x15);
+//	systick_Delay_ms(1500);
+//
+//	lcd_gotoxy(&lcd, 0, 0x54);
+//	systick_Delay_ms(1000);
+//	lcd_gotoxy(&lcd, 0, 0x55);
+//	systick_Delay_ms(1500);
+//
+//	lcd_gotoxy(&lcd, 3, 0);
+//	systick_Delay_ms(1000);
+//	lcd_gotoxy(&lcd, 3, 1);
+//	systick_Delay_ms(1000);
+
+//	lcd_gotoxy(&lcd, 1, 0x14);
+//	systick_Delay_ms(1500);
+//	lcd_gotoxy(&lcd, 1, 15);
+//	systick_Delay_ms(1500);
+//	lcd_gotoxy(&lcd, 1, 0x14);
+//	systick_Delay_ms(1500);
+//	lcd_gotoxy(&lcd, 1, 0x15);
+//	systick_Delay_ms(1500);
+//
+//	lcd_gotoxy(&lcd, 1, 0x54);
+//	systick_Delay_ms(1500);
+//	lcd_gotoxy(&lcd, 1, 0x55);
+//	systick_Delay_ms(1500);
+
+
+	lcd_putc(&lcd, "=)");
+	systick_Delay_ms(1500);
+
 //	lcd_gotoxy(&lcd, 0, 6);
 //	systick_Delay_ms(1000);
 //	lcd_gotoxy(&lcd, 0, 13);
@@ -192,6 +267,8 @@ int main(void)
 //	systick_Delay_ms(2000);
 //	lcd_data(&lcd, valor_segundos);
 	lcd_clear(&lcd);
+
+
 
 
 
@@ -387,8 +464,8 @@ void init_system(void){
 	gpio_Config(&MCO);
 
 
-	pinScl.pGPIOx 								= GPIOB;
-	pinScl.pinConfig.GPIO_PinNumber 			= PIN_10;
+	pinScl.pGPIOx 								= GPIOA;
+	pinScl.pinConfig.GPIO_PinNumber 			= PIN_8;
 	pinScl.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinScl.pinConfig.GPIO_PinOutputSpeed		= GPIO_OSPEED_MEDIUM;
 	pinScl.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -398,7 +475,7 @@ void init_system(void){
 	gpio_Config(&pinScl);
 
 	pinSda.pGPIOx 								= GPIOB;
-	pinSda.pinConfig.GPIO_PinNumber 			= PIN_3;
+	pinSda.pinConfig.GPIO_PinNumber 			= PIN_8;
 	pinSda.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinSda.pinConfig.GPIO_PinOutputSpeed 		= GPIO_OSPEED_MEDIUM;
 	pinSda.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -409,7 +486,7 @@ void init_system(void){
 
 
 
-	lcd.pI2Cx									= I2C2;
+	lcd.pI2Cx									= I2C3;
 	lcd.i2c_mode								= I2C_MODE_SM_SPEED;
 	lcd.slaveAddress					       	= LCD_ADDRESS;
 	i2c_Config(&lcd);
