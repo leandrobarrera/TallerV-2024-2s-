@@ -65,7 +65,8 @@ uint16_t adc_array_collector[ARRAY_SIZE] = {0}; // array para v_collector
 uint8_t index_base = 0;      // indice para base
 uint8_t index_collector = 0; // indice para collector
 uint8_t valor_segundos = 0;
-
+uint8_t lcdX = 0;
+uint8_t lcdY = 0;
 //variables para creacion de numero
 uint16_t siete_segmentos = 0;		// # que se imprime en el 7segmentos.
 uint8_t unidades = 0;
@@ -176,21 +177,24 @@ int main(void)
 	setMinutes(48);
 
 	lcd_cursor_blinky_Enable(&lcd);
-	systick_Delay_ms(1000);
-	lcd_clear(&lcd);
-	systick_Delay_ms(1000);
-	lcd_putc(&lcd, "Taller V va a acabar... ¿conmigo?");
+	lcd_putc(&lcd, "si funciona");
 	systick_Delay_ms(2000);
-	lcd_gotoxy(&lcd, 1, 0);
 	lcd_clear(&lcd);
-	lcd_putc(&lcd, "Te amo mucho, gatito <3");
-	systick_Delay_ms(2000);
-	lcd_cursor_blinky_Disabled(&lcd);
+//	lcd_gotoxy(&lcd, 0, 6);
+//	systick_Delay_ms(1000);
+//	lcd_gotoxy(&lcd, 0, 13);
+//	systick_Delay_ms(1000);
+//	lcd_gotoxy(&lcd, 0,19);
+//	lcd_gotoxy(&lcd, 1,10);
+//	systick_Delay_ms(2000);
+//	lcd_clear(&lcd);
+//	lcd_gotoxy(&lcd, 1, 1);
+//	systick_Delay_ms(2000);
+//	lcd_data(&lcd, valor_segundos);
 	lcd_clear(&lcd);
-	lcd_putc(&lcd, "¡Tú puedes con todo!");
-		systick_Delay_ms(2000);
-		lcd_cursor_blinky_Disabled(&lcd);
-		lcd_clear(&lcd);
+
+
+
 
 
 
@@ -343,40 +347,6 @@ void init_system(void){
 	gpio_Config(&switcheoMillares);
 
 
-	/*	LedRed*/
-	LedRed.pGPIOx 							= 	GPIOB;
-	LedRed.pinConfig.GPIO_PinNumber			=	PIN_8;
-	LedRed.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
-	LedRed.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
-	LedRed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	LedRed.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-	LedRed.pinConfig.GPIO_PinAltFunMode		= 	AF2;
-	gpio_Config(&LedRed);
-	gpio_WritePin(&LedRed, 0);
-
-
-
-	/*	LedBlue*/
-	LedBlue.pGPIOx 							= 	GPIOB;
-	LedBlue.pinConfig.GPIO_PinNumber		=	PIN_9;
-	LedBlue.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
-	LedBlue.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
-	LedBlue.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	LedBlue.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-
-	gpio_Config(&LedBlue);
-	gpio_WritePin(&LedBlue, 0);
-
-	/*	LedGreen*/
-	LedGreen.pGPIOx 						= 	GPIOA;
-	LedGreen.pinConfig.GPIO_PinNumber		=	PIN_5;
-	LedGreen.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
-	LedGreen.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
-	LedGreen.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	LedGreen.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-
-	gpio_Config(&LedGreen);
-	gpio_WritePin(&LedGreen, 0);
 
 	/* pinCollector */
 	pinCollector.pGPIOx 							= 	GPIOA;
@@ -439,9 +409,9 @@ void init_system(void){
 
 
 
-	lcd.pI2Cx											= I2C2;
-	lcd.i2c_mode										= I2C_MODE_SM_SPEED;
-	lcd.slaveAddress					       			= LCD_ADDRESS;
+	lcd.pI2Cx									= I2C2;
+	lcd.i2c_mode								= I2C_MODE_SM_SPEED;
+	lcd.slaveAddress					       	= LCD_ADDRESS;
 	i2c_Config(&lcd);
 	lcd_init(&lcd);
 
@@ -919,7 +889,11 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "9) setVoltC # -- PWM-DAC output for collector (mV)\n");
         usart_writeMsg(&commSerial, "10) readVoltB # -- ADC value for base (mV)\n");
         usart_writeMsg(&commSerial, "11) readVoltC # -- ADC value for collector (mV)\n");
-        usart_writeMsg(&commSerial, "12) analyzeIcVb # -- Curva Ic vs Vb (mV)\n");
+        usart_writeMsg(&commSerial, "12) lcdClear #  -- Clear LCD\n");
+        usart_writeMsg(&commSerial, "13) lcdCursor   -- on-off cursor LCD");
+        usart_writeMsg(&commSerial, "14) lcdLine     -- move cursor to line\n");
+        usart_writeMsg(&commSerial, "15) lcdXY       -- move cursor to X-line/Y-pos\n");
+        usart_writeMsg(&commSerial, "16) lcdVolt     -- read volt and show in LCD\n");
     }
 
     // El comando dummy sirve para entender como funciona la recepción de números enviados
@@ -1130,6 +1104,63 @@ void parseCommands(char *ptrBufferReception){
 	        usart_writeMsg(&commSerial, formattedData);
 	    }
 	}
+
+	else if (strcmp(cmd, "lcdClear") == 0){
+	        usart_writeMsg(&commSerial, "CMD: lcdClear\n");
+	        // Cambiando el formato para presentar por el puerto serial
+	        lcd_clear(&lcd);
+	        usart_writeMsg(&commSerial, "Pantalla limpiada.\n");
+
+	    }
+	else if (strcmp(cmd, "lcdCursor") == 0){
+			usart_writeMsg(&commSerial, "CMD: lcdCursor\n");
+			if (firstParameter == 1){
+				lcd_cursor_blinky_Enable(&lcd);
+		        usart_writeMsg(&commSerial, "Cursor on.\n");
+			}
+			else{
+				lcd_cursor_blinky_Disabled(&lcd);
+				usart_writeMsg(&commSerial, "Cursor off.\n");
+			}
+
+
+		}
+	else if (strcmp(cmd, "lcdLine") == 0){
+				usart_writeMsg(&commSerial, "CMD: lcdLine\n");
+				if (firstParameter<=1 && firstParameter>=0){
+					lcdX = firstParameter;
+					lcd_gotoxy(&lcd,lcdX,lcdY);
+			        usart_writeMsg(&commSerial, "Linea ajustada.\n");
+				}
+				else{
+				 // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
+					usart_writeMsg(&commSerial, "Linea fuera de rango.\n");
+							}
+
+
+				}
+	else if (strcmp(cmd, "lcdXY") == 0){
+			usart_writeMsg(&commSerial, "CMD: lcdLine\n");
+			if (firstParameter<=1 && firstParameter>=0 && secondParameter<=19&& secondParameter>=0){
+				lcdX = firstParameter;
+				lcdY = secondParameter;
+				lcd_gotoxy(&lcd,lcdX,lcdY);
+				usart_writeMsg(&commSerial, "Nueva coordenada establecida.\n");
+			}
+			else{
+			 // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
+				usart_writeMsg(&commSerial, "Linea fuera de rango.\n");
+						}
+
+
+			}
+	else if (strcmp(cmd, "lcdVolt") == 0){
+		        usart_writeMsg(&commSerial, "CMD: lcdVolt\n");
+		        // Cambiando el formato para presentar por el puerto serial
+		        lcd_data(&lcd, voltage_c);
+		        usart_writeMsg(&commSerial, "Pantalla limpiada.\n");
+
+		    }
 
 
 	 else{
