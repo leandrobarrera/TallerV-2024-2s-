@@ -23,7 +23,7 @@ void lcd_init(I2C_Handler_t *ptrHandlerLCDI2C)
 	i2c_WriteSingle(ptrHandlerLCDI2C, (LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(10);
 
-	//-----------------------------------1) Modo de 4 bit---------------------------------------------------
+	//1) Modo de 4 bit
 	//Envio de comando 3 veces
 	i2c_WriteSingle(ptrHandlerLCDI2C, (ENTER_MODE_4_BIT | LED_ENABLE | EN_ENABLE | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(1);
@@ -43,7 +43,7 @@ void lcd_init(I2C_Handler_t *ptrHandlerLCDI2C)
 	i2c_WriteSingle(ptrHandlerLCDI2C, (RF_MODE_4_BIT | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
 	systick_Delay_ms(50);
 
-	//---------------------------2) Lineas logicas y tamaño de caracteres----------------------------------
+	//2) Lineas logicas y tamaño de caracteres
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((RF_LINE_CHARACTER & BITS_H) | LED_ENABLE | EN_ENABLE | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(1);
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((RF_LINE_CHARACTER & BITS_H) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
@@ -53,7 +53,7 @@ void lcd_init(I2C_Handler_t *ptrHandlerLCDI2C)
 	i2c_WriteSingle(ptrHandlerLCDI2C, (((RF_LINE_CHARACTER & BITS_L)<<4) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
 	systick_Delay_ms(1);
 
-	//---------------------------3) Encender LCD----------------------------------
+	//3) Encender LCD
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((TURN_ON_DISPLAY & BITS_H) | LED_ENABLE | EN_ENABLE | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(1);
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((TURN_ON_DISPLAY & BITS_H) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
@@ -63,10 +63,10 @@ void lcd_init(I2C_Handler_t *ptrHandlerLCDI2C)
 	i2c_WriteSingle(ptrHandlerLCDI2C, (((TURN_ON_DISPLAY & BITS_L)<<4) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
 	systick_Delay_ms(1);
 
-	//---------------------------4) Limpiamos pantalla----------------------------------
+	//4) Limpiamos pantalla
 	lcd_clear(ptrHandlerLCDI2C);
 
-	//---------------------------5) Definimos el desplazamiento del Cursor---------------------------------
+	//5) Definimos el desplazamiento del Cursor
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((EM_CURSOR_RIGHT & BITS_H) | LED_ENABLE | EN_ENABLE | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(1);
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((EM_CURSOR_RIGHT & BITS_H) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
@@ -75,7 +75,7 @@ void lcd_init(I2C_Handler_t *ptrHandlerLCDI2C)
 	systick_Delay_ms(1);
 	i2c_WriteSingle(ptrHandlerLCDI2C, (((EM_CURSOR_RIGHT & BITS_L)<<4) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN
 	systick_Delay_ms(1);
-	//---------------------------6) Activamos la visualizacion de caracteres en el display---------------------------------
+	//6) Activamos la visualizacion de caracteres en el display
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((DIPLAY_ENABLE  & BITS_H) | LED_ENABLE | EN_ENABLE | RW_SELECT_WRITE | RS_SELECT_ID));   //Enviamos comando y activamos EN
 	systick_Delay_ms(1);
 	i2c_WriteSingle(ptrHandlerLCDI2C, ((DIPLAY_ENABLE & BITS_H) | LED_ENABLE | EN_DISABLED | RW_SELECT_WRITE | RS_SELECT_ID));   //Desactivamos EN

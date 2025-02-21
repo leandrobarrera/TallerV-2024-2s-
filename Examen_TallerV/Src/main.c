@@ -179,12 +179,18 @@ int main(void)
 	systick_Delay_ms(1000);
 	lcd_clear(&lcd);
 	systick_Delay_ms(1000);
-	lcd_putc(&lcd, "Taller V va a acabar");
+	lcd_putc(&lcd, "Taller V va a acabar... ¿conmigo?");
+	systick_Delay_ms(2000);
 	lcd_gotoxy(&lcd, 1, 0);
 	lcd_clear(&lcd);
-	lcd_putc(&lcd, "que mas quieres");
-	systick_Delay_ms(100);
+	lcd_putc(&lcd, "Te amo mucho, gatito <3");
+	systick_Delay_ms(2000);
 	lcd_cursor_blinky_Disabled(&lcd);
+	lcd_clear(&lcd);
+	lcd_putc(&lcd, "¡Tú puedes con todo!");
+		systick_Delay_ms(2000);
+		lcd_cursor_blinky_Disabled(&lcd);
+		lcd_clear(&lcd);
 
 
 
