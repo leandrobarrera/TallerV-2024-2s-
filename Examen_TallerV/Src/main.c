@@ -29,6 +29,18 @@
 #define BUFFER_SIZE 						64
 #define ARRAY_SIZE 100  // 100 muestras por array
 #define LCD_ADDRESS 0b00100010
+#define segundoh		21
+#define minutoh		45
+#define horah		12
+#define diah		21
+#define mesh		2
+#define solesh		25
+
+
+
+
+
+
 
 //Handlers GPIO, para los pines. Lo de toda la vida.
 GPIO_Handler_t userLed = {0}; 	//	PinH1
@@ -74,6 +86,14 @@ uint8_t decenas = 0;
 uint8_t centenas = 0;
 uint8_t millares = 0;
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
+uint8_t segundos = 0;
+uint8_t minutos = 0;
+uint8_t horas = 0;
+uint8_t dias = 0;
+uint8_t meses = 0;
+uint16_t soles = 0;
+
+
 
 //variables para USART6
 USART_Handler_t commSerial={0};
@@ -166,109 +186,19 @@ int main(void)
 	configPLL(100);
 	config_SysTick_ms(2);
 	init_system();
-	//config_SysTick_ms(0);
 	configMagic();
 	configChannelMCO1(0b11);
 	configPresMCO1(MCO1_PRESCALER_DIV_5);
 
 	config_RTC();
-	setSegundos(10);
-	setHour(8) ;
-	setMinutes(48);
-
-	lcd_cursor_blinky_Enable(&lcd);
-	lcd_putc(&lcd, "si funciona");
-	systick_Delay_ms(500);
-	lcd_clear(&lcd);
-
-	lcd_gotoxy(&lcd, 0, 0);
-	systick_Delay_ms(1000);
-	lcd_gotoxy(&lcd, 0, 0x01);
-	systick_Delay_ms(500);
-
-	lcd_gotoxy(&lcd, 0, 0x10);
-	systick_Delay_ms(1000);
-	lcd_gotoxy(&lcd, 0, 0x11);
-	systick_Delay_ms(500);
-
-	lcd_gotoxy(&lcd, 0, 0x12);
-		systick_Delay_ms(1000);
-		lcd_gotoxy(&lcd, 0, 0x13);
-		systick_Delay_ms(500);
-
-		lcd_gotoxy(&lcd, 0, 0x14);
-			systick_Delay_ms(1000);
-			lcd_gotoxy(&lcd, 0, 0x15);
-			systick_Delay_ms(500);
-
-			lcd_gotoxy(&lcd, 0, 0x16);
-					systick_Delay_ms(1000);
-					lcd_gotoxy(&lcd, 0, 0x17);
-					systick_Delay_ms(500);
-
-					lcd_gotoxy(&lcd, 0, 0x18);
-						systick_Delay_ms(1000);
-						lcd_gotoxy(&lcd, 0, 0x19);
-						systick_Delay_ms(500);
-
-						lcd_gotoxy(&lcd, 1, 0);
-							systick_Delay_ms(1000);
-							lcd_gotoxy(&lcd, 1, 0x01);
-							systick_Delay_ms(500);
-
-							lcd_gotoxy(&lcd, 1, 0x10);
-							systick_Delay_ms(1000);
-							lcd_gotoxy(&lcd, 1, 0x11);
-							systick_Delay_ms(500);
-
-
-//	lcd_gotoxy(&lcd, 1, 0x14);
-//	systick_Delay_ms(1000);
-//	lcd_gotoxy(&lcd, 1, 0x15);
-//	systick_Delay_ms(1500);
-//
-//	lcd_gotoxy(&lcd, 0, 0x54);
-//	systick_Delay_ms(1000);
-//	lcd_gotoxy(&lcd, 0, 0x55);
-//	systick_Delay_ms(1500);
-//
-//	lcd_gotoxy(&lcd, 3, 0);
-//	systick_Delay_ms(1000);
-//	lcd_gotoxy(&lcd, 3, 1);
-//	systick_Delay_ms(1000);
-
-//	lcd_gotoxy(&lcd, 1, 0x14);
-//	systick_Delay_ms(1500);
-//	lcd_gotoxy(&lcd, 1, 15);
-//	systick_Delay_ms(1500);
-//	lcd_gotoxy(&lcd, 1, 0x14);
-//	systick_Delay_ms(1500);
-//	lcd_gotoxy(&lcd, 1, 0x15);
-//	systick_Delay_ms(1500);
-//
-//	lcd_gotoxy(&lcd, 1, 0x54);
-//	systick_Delay_ms(1500);
-//	lcd_gotoxy(&lcd, 1, 0x55);
-//	systick_Delay_ms(1500);
-
-
-	lcd_putc(&lcd, "=)");
-	systick_Delay_ms(1500);
-
-//	lcd_gotoxy(&lcd, 0, 6);
-//	systick_Delay_ms(1000);
-//	lcd_gotoxy(&lcd, 0, 13);
-//	systick_Delay_ms(1000);
-//	lcd_gotoxy(&lcd, 0,19);
-//	lcd_gotoxy(&lcd, 1,10);
-//	systick_Delay_ms(2000);
-//	lcd_clear(&lcd);
-//	lcd_gotoxy(&lcd, 1, 1);
-//	systick_Delay_ms(2000);
-//	lcd_data(&lcd, valor_segundos);
-	lcd_clear(&lcd);
-
-
+	enableRTCChange();
+	setSegundos(segundoh);
+	setHour(horah) ;
+	setMinutes(minutoh);
+	setDia(diah);
+	setMes(mesh);
+	setYear(solesh);
+	disableRTCChange();
 
 
 
@@ -277,7 +207,7 @@ int main(void)
 
 
 	while(1){
-		valor_segundos = getSegundos();
+
 		fsm_function(fsm_program.state);
 
 		}
@@ -941,7 +871,16 @@ void analizeRecievedChar(void){
 	}
 }
 
+void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, int valor)
+{
+    char buffer[32];  // buffer que guarda txt
 
+    // Convierte el # a txt --> sprintf  %d = entero decimal
+    sprintf(buffer, "%02d", valor);
+
+    // 2) Llamada para imprimir la cadena
+    lcd_putc(ptrHandlerLCDI2C, buffer);
+}
 
 
 /* Función encargada de analizar los comandos percibidos por el puerto serial */
@@ -971,6 +910,8 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "14) lcdLine     -- move cursor to line\n");
         usart_writeMsg(&commSerial, "15) lcdXY       -- move cursor to X-line/Y-pos\n");
         usart_writeMsg(&commSerial, "16) lcdVolt     -- read volt and show in LCD\n");
+        usart_writeMsg(&commSerial, "17) time     -- shows time now.\n");
+
     }
 
     // El comando dummy sirve para entender como funciona la recepción de números enviados
@@ -1238,6 +1179,30 @@ void parseCommands(char *ptrBufferReception){
 		        usart_writeMsg(&commSerial, "Pantalla limpiada.\n");
 
 		    }
+
+	else if (strcmp(cmd, "time") == 0) {
+		    usart_writeMsg(&commSerial, "CMD: time\n");
+
+		    lcd_clear(&lcd);
+		    lcd_gotoxy(&lcd, 0, 0);
+
+		    //lee la hora.
+			segundos = getSegundos();
+		    minutos = getMinutes();
+			horas = getHour();
+
+
+
+		    // mostrar valores en la LCD. Se posiciona el cursor primero y luego la hora.
+		    lcd_gotoxy(&lcd, 0, 0);
+		    lcd_putc(&lcd,"La hora es:");
+		    lcd_gotoxy(&lcd, 1, 0);
+		    lcd_value(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
+		    lcd_gotoxy(&lcd, 1, 3);
+		    lcd_value(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
+			lcd_gotoxy(&lcd, 1, 6);
+			lcd_value(&lcd,segundos);
+		}
 
 
 	 else{
