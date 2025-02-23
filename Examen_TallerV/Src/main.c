@@ -92,6 +92,8 @@ uint8_t horas = 0;
 uint8_t dias = 0;
 uint8_t meses = 0;
 uint16_t soles = 0;
+uint8_t flagshowtime = 0;
+uint16_t counter = 0;
 
 
 
@@ -175,6 +177,7 @@ void giro (void);
 void refresh (void);
 extern void configMagic(void);
 void configPresMCO1(uint8_t prescaler);
+void show_time(void);
 
 
 FSM_STATES fsm_function(uint8_t evento);
@@ -394,8 +397,8 @@ void init_system(void){
 	gpio_Config(&MCO);
 
 
-	pinScl.pGPIOx 								= GPIOA;
-	pinScl.pinConfig.GPIO_PinNumber 			= PIN_8;
+	pinScl.pGPIOx = GPIOB;
+	pinScl.pinConfig.GPIO_PinNumber 			= PIN_10;
 	pinScl.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinScl.pinConfig.GPIO_PinOutputSpeed		= GPIO_OSPEED_MEDIUM;
 	pinScl.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -404,8 +407,8 @@ void init_system(void){
 
 	gpio_Config(&pinScl);
 
-	pinSda.pGPIOx 								= GPIOB;
-	pinSda.pinConfig.GPIO_PinNumber 			= PIN_8;
+	pinSda.pGPIOx = GPIOB;
+	pinSda.pinConfig.GPIO_PinNumber 			= PIN_3;
 	pinSda.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinSda.pinConfig.GPIO_PinOutputSpeed 		= GPIO_OSPEED_MEDIUM;
 	pinSda.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -414,10 +417,9 @@ void init_system(void){
 
 	gpio_Config(&pinSda);
 
-
-
-	lcd.pI2Cx									= I2C3;
-	lcd.i2c_mode								= I2C_MODE_SM_SPEED;
+	lcd.pI2Cx = I2C2;
+	lcd.i2c_mode = I2C_MODE_SM_SPEED;
+	lcd.i2c_mainClock = I2C_MAIN_CLOCK_16_Mhz;
 	lcd.slaveAddress					       	= LCD_ADDRESS;
 	i2c_Config(&lcd);
 	lcd_init(&lcd);
@@ -476,8 +478,8 @@ void init_system(void){
 	 */
 
 	blinkyTimer.pTIMx 								= TIM5;
-	blinkyTimer.TIMx_Config.TIMx_Prescaler			=16000;  //	Genera incrementos de 1ms
-	blinkyTimer.TIMx_Config.TIMx_Period				=250;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
+	blinkyTimer.TIMx_Config.TIMx_Prescaler			=10000;  //	Genera incrementos de 1ms
+	blinkyTimer.TIMx_Config.TIMx_Period				=2500;  //	el prescaler lo ajusta 1ms, entonces lo quiero a 250ms, y es la multiplicacion de uno con el otro.
 	blinkyTimer.TIMx_Config.TIMx_mode				=TIMER_UP_COUNTER;  //
 	blinkyTimer.TIMx_Config.TIMx_InterruptEnable	=TIMER_INT_ENABLE;  //
 
@@ -501,50 +503,51 @@ void init_system(void){
 	//	Encedemos el Timer.
 	timer_SetState(&display,SET);
 
+//
+//	/* Configuracion del PWM */
+//
+//	red_pwm.ptrTIMx = TIM4;
+//	red_pwm.config.channel = PWM_CHANNEL_3;
+//	red_pwm.config.periodo = 500;
+//	red_pwm.config.prescaler = 150; // freq 10us
+//	red_pwm.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
+//
+//	/* Se carga el PWM con los parametros establecidos */
+//	pwm_Config(&red_pwm);
+//	pwm_Enable_Output(&red_pwm);
+//
+//	pwm_Start_Signal(&red_pwm);
+//
+//
+//
+//	collector.ptrTIMx = TIM3;
+//	collector.config.channel = PWM_CHANNEL_1;
+//	collector.config.periodo = 500;
+//	collector.config.prescaler = 50; // freq
+//	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+//
+//
+//	/* Se carga el PWM con los parametros establecidos */
+//	pwm_Config(&collector);
+//
+//	pwm_Enable_Output(&collector);
+//
+//	pwm_Start_Signal(&collector);
+//
+//	base.ptrTIMx = TIM3;
+//	base.config.channel = PWM_CHANNEL_2;
+//	base.config.periodo = 500;
+//	base.config.prescaler = 50; // freq
+//	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
+//
+//
+//	/* Se carga el PWM con los parametros establecidos */
+//	pwm_Config(&base);
+//
+//	pwm_Enable_Output(&base);
+//
+//	pwm_Start_Signal(&base);
 
-	/* Configuracion del PWM */
-
-	red_pwm.ptrTIMx = TIM4;
-	red_pwm.config.channel = PWM_CHANNEL_3;
-	red_pwm.config.periodo = 500;
-	red_pwm.config.prescaler = 150; // freq 10us
-	red_pwm.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
-
-	/* Se carga el PWM con los parametros establecidos */
-	pwm_Config(&red_pwm);
-	pwm_Enable_Output(&red_pwm);
-
-	pwm_Start_Signal(&red_pwm);
-
-
-
-	collector.ptrTIMx = TIM3;
-	collector.config.channel = PWM_CHANNEL_1;
-	collector.config.periodo = 500;
-	collector.config.prescaler = 50; // freq
-	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
-
-
-	/* Se carga el PWM con los parametros establecidos */
-	pwm_Config(&collector);
-
-	pwm_Enable_Output(&collector);
-
-	pwm_Start_Signal(&collector);
-
-	base.ptrTIMx = TIM3;
-	base.config.channel = PWM_CHANNEL_2;
-	base.config.periodo = 500;
-	base.config.prescaler = 50; // freq
-	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
-
-
-	/* Se carga el PWM con los parametros establecidos */
-	pwm_Config(&base);
-
-	pwm_Enable_Output(&base);
-
-	pwm_Start_Signal(&base);
 
 
 
@@ -882,6 +885,44 @@ void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, int valor)
     lcd_putc(ptrHandlerLCDI2C, buffer);
 }
 
+void show_time(void){
+
+	if(flagshowtime){
+
+	    lcd_clear(&lcd);
+	    lcd_gotoxy(&lcd, 0, 0);
+
+	    //lee la hora.
+		segundos = getSegundos();
+	    minutos = getMinutes();
+		horas = getHour();
+		dias = getDia();
+		mes = getMes();
+		soles = getYear();
+
+	    // mostrar valores en la LCD. Se posiciona el cursor primero y luego la hora.
+	    lcd_gotoxy(&lcd, 0, 0);
+	    lcd_putc(&lcd,"La hora es:");
+	    lcd_gotoxy(&lcd, 1, 0);
+	    lcd_value(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
+	    lcd_gotoxy(&lcd, 1, 3);
+	    lcd_value(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
+		lcd_gotoxy(&lcd, 1, 6);
+		lcd_value(&lcd,segundos);
+
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
 
 /* Función encargada de analizar los comandos percibidos por el puerto serial */
 void parseCommands(char *ptrBufferReception){
@@ -911,6 +952,7 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "15) lcdXY       -- move cursor to X-line/Y-pos\n");
         usart_writeMsg(&commSerial, "16) lcdVolt     -- read volt and show in LCD\n");
         usart_writeMsg(&commSerial, "17) time     -- shows time now.\n");
+        usart_writeMsg(&commSerial, "18) MCO1     -- Change signal MCO1 HSI-LSE-HSE-PLL/DIV2(4)-DIV3(5)-DIV4(6)-DIV5(7).\n");
 
     }
 
@@ -1151,7 +1193,6 @@ void parseCommands(char *ptrBufferReception){
 			        usart_writeMsg(&commSerial, "Linea ajustada.\n");
 				}
 				else{
-				 // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
 					usart_writeMsg(&commSerial, "Linea fuera de rango.\n");
 							}
 
@@ -1166,7 +1207,6 @@ void parseCommands(char *ptrBufferReception){
 				usart_writeMsg(&commSerial, "Nueva coordenada establecida.\n");
 			}
 			else{
-			 // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
 				usart_writeMsg(&commSerial, "Linea fuera de rango.\n");
 						}
 
@@ -1183,27 +1223,38 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "time") == 0) {
 		    usart_writeMsg(&commSerial, "CMD: time\n");
 
-		    lcd_clear(&lcd);
-		    lcd_gotoxy(&lcd, 0, 0);
+			if (firstParameter == 1){
+				flagshowtime = 1;
+		        usart_writeMsg(&commSerial, "Mostrar hora.\n");
+			}
+			else if(firstParameter == 0){
+				flagshowtime = 0;
+				usart_writeMsg(&commSerial, "Ocultar hora.\n");
+				lcd_clear(&lcd);
+			}
+			else{
+				usart_writeMsg(&commSerial, "Parametro invalido.\n");
+						}
 
-		    //lee la hora.
-			segundos = getSegundos();
-		    minutos = getMinutes();
-			horas = getHour();
-
-
-
-		    // mostrar valores en la LCD. Se posiciona el cursor primero y luego la hora.
-		    lcd_gotoxy(&lcd, 0, 0);
-		    lcd_putc(&lcd,"La hora es:");
-		    lcd_gotoxy(&lcd, 1, 0);
-		    lcd_value(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
-		    lcd_gotoxy(&lcd, 1, 3);
-		    lcd_value(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
-			lcd_gotoxy(&lcd, 1, 6);
-			lcd_value(&lcd,segundos);
 		}
 
+	else if (strcmp(cmd, "MCO1")==0){
+			usart_writeMsg(&commSerial, "cmd: MCO1 \n");
+
+			if (firstParameter<=3 && firstParameter>=0){
+				configChannelMCO1(firstParameter);
+				if (secondParameter<=7 && secondParameter>=4){
+					configPresMCO1(secondParameter);
+
+				usart_writeMsg(&commSerial, "Prescaler y señal cambiada.\n");
+			}
+			else{
+
+				usart_writeMsg(&commSerial, "Valores invalidos.\n");
+						}
+
+
+		}
 
 	 else{
 	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
@@ -1214,16 +1265,7 @@ void parseCommands(char *ptrBufferReception){
 
     }
 
-
-
-
-
-
-
-
-
-
-
+}
 
 
 
@@ -1339,6 +1381,11 @@ FSM_STATES fsm_function(uint8_t evento){
 	case STATE_REFRESH_DISPLAY:{
 		refresh();
 		adc_StartSingleConv();
+		counter++;
+		if(counter == 1000){
+			show_time();
+			counter = 0;
+		}
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -1425,8 +1472,8 @@ void Timer2_Callback(void){
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
 
-
 }
+
 
 
 //Callbacks del EXTI.
