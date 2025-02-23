@@ -74,6 +74,7 @@ uint32_t voltage_c = 0; //voltaje del collector
 uint32_t voltage_b = 0; //voltaje del base
 uint16_t adc_array_base[ARRAY_SIZE] = {0};      // array para v_base
 uint16_t adc_array_collector[ARRAY_SIZE] = {0}; // array para v_collector
+uint16_t adc_array_potenciometro[ARRAY_SIZE] = {0};
 uint8_t index_base = 0;      // indice para base
 uint8_t index_collector = 0; // indice para collector
 uint8_t valor_segundos = 0;
@@ -95,6 +96,8 @@ uint16_t soles = 0;
 uint8_t flagshowtime = 0;
 uint16_t counter = 0;
 uint8_t potenciometro = 0;
+uint8_t index_potenciometro = 0;
+float value = 0;
 
 
 //variables para USART6
@@ -385,7 +388,7 @@ void init_system(void){
 
 
 	/* MCO2pin */
-	MCO.pGPIOx 								= 	GPIOA;
+	MCO.pGPIOx 							= 	GPIOA;
 	MCO.pinConfig.GPIO_PinNumber			=	PIN_8;
 	MCO.pinConfig.GPIO_PinMode				=	GPIO_MODE_ALTFN;
 	MCO.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
@@ -603,7 +606,7 @@ void init_system(void){
 
 	//ADC para leer voltaje de colector. Pin PC0
 
-	v_collector.channel 			= CHANNEL_10;
+	v_collector.channel 			= CHANNEL_0;
 	v_collector.resolution 			= RESOLUTION_12_BIT;
 	v_collector.dataAlignment 		= ALIGNMENT_RIGHT;
 	v_collector.interruptState 		= ADC_INT_ENABLE;
@@ -613,13 +616,13 @@ void init_system(void){
 	adc_ConfigSingleChannel(&v_collector);
 	adc_StartSingleConv();
 
-	//ADC para leer voltaje de base. PinPC1
-
-	v_base.channel 					= CHANNEL_11;
-	v_base.resolution 				= RESOLUTION_12_BIT;
-	v_base.dataAlignment 			= ALIGNMENT_RIGHT;
-	v_base.interruptState 			= ADC_INT_ENABLE;
-	v_base.samplingPeriod 			= SAMPLING_PERIOD_112_CYCLES;
+//	//ADC para leer voltaje de base. PinPC1
+//
+//	v_base.channel 					= CHANNEL_11;
+//	v_base.resolution 				= RESOLUTION_12_BIT;
+//	v_base.dataAlignment 			= ALIGNMENT_RIGHT;
+//	v_base.interruptState 			= ADC_INT_ENABLE;
+//	v_base.samplingPeriod 			= SAMPLING_PERIOD_112_CYCLES;
 
 	// no se carga esta config porque solo puede haber uno cargado, por algo se llama configsinglechannel
 
@@ -874,12 +877,12 @@ void analizeRecievedChar(void){
 	}
 }
 
-void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, int valor)
+void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor)
 {
     char buffer[32];  // buffer que guarda txt
 
     // Convierte el # a txt --> sprintf  %d = entero decimal
-    sprintf(buffer, "%02d", valor);
+    sprintf(buffer, "%.2f", valor);
 
     // 2) Llamada para imprimir la cadena
     lcd_putc(ptrHandlerLCDI2C, buffer);
@@ -920,7 +923,21 @@ void show_time(void){
 }
 
 
+float adc_CalculateAverageVoltage(uint16_t *adc_array, uint16_t size) {
+    uint32_t sum = 0;  // Variable para almacenar la suma total
 
+    for (uint16_t i = 0; i < size; i++) {
+        sum += adc_array[i];  // Sumar cada valor del array
+    }
+
+    // Calcular promedio
+    uint16_t adc_avg = (uint16_t)(sum / size);
+
+    // Convertir el promedio a voltaje usando la regla de 3
+    float voltage = (adc_avg * 3.3) / 4096;
+
+    return voltage;  // Retornar el voltaje promediado
+}
 
 
 
@@ -1219,8 +1236,12 @@ void parseCommands(char *ptrBufferReception){
 			}
 	else if (strcmp(cmd, "lcdVolt") == 0){
 		        usart_writeMsg(&commSerial, "CMD: lcdVolt\n");
+		        adc_StartSingleConv();
+
 		        // Cambiando el formato para presentar por el puerto serial
-		        lcd_data(&lcd, voltage_c);
+		        lcd_clear(&lcd);
+		        value = (adc_GetValue()*3.3)/4096;
+		        lcd_value(&lcd, value);
 		        usart_writeMsg(&commSerial, "Voltaje enviado.\n");
 
 		    }
@@ -1385,7 +1406,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_REFRESH_DISPLAY:{
 		refresh();
-		adc_StartSingleConv();
+		//adc_StartSingleConv();
 		counter++;
 		if(counter == 1000){
 			show_time();
@@ -1407,35 +1428,45 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_COMMAND_COMPLETE:{
-break;
+
+			break;
 	}
+
 	case STATE_READ_ADC:{
 		fsm_program.state = STATE_IDLE;
-		uint16_t adc_value = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
-		 if (flag_adc == 0) {
-				adc_array_base[index_base] = adc_value;  // Guardar valor en la posición actual
-				voltage_b = adc_value;
-				adc_ConfigSingleChannel(&v_collector); // Configurar el ADC para el siguiente canal
-				flag_adc = 1; // Cambiar al otro array en la siguiente lectura
-				index_base ++;
 
-				if (index_base >= 100) {
-					index_base = 0;  // Reiniciar índice si llega a 100
-
-				}
+//		adc_array_potenciometro[index_potenciometro] = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
+//		index_potenciometro ++;
+//		if (index_potenciometro >= 100) {
+//			index_potenciometro = 0;  // Reiniciar índice si llega a 100
+//			}
 
 
-		} else if(flag_adc == 1){
-			adc_array_collector[index_collector] = adc_value;  // Guardar en array correspondiente
-			voltage_c = adc_value;
-			adc_ConfigSingleChannel(&v_base); // Configurar el ADC para el siguiente canal
-			flag_adc = 0; // Cambiar de nuevo al otro array
-			index_collector ++;
-			if (index_collector >= 100) {
-				index_collector = 0;  // Reiniciar índice si llega a 100
-			}
-
-		}
+//		uint16_t adc_value = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
+//		 if (flag_adc == 0) {
+//				adc_array_base[index_base] = adc_value;  // Guardar valor en la posición actual
+//				voltage_b = adc_value;
+//				adc_ConfigSingleChannel(&v_collector); // Configurar el ADC para el siguiente canal
+//				flag_adc = 1; // Cambiar al otro array en la siguiente lectura
+//				index_base ++;
+//
+//				if (index_base >= 100) {
+//					index_base = 0;  // Reiniciar índice si llega a 100
+//
+//				}
+//
+//
+//		} else if(flag_adc == 1){
+//			adc_array_collector[index_collector] = adc_value;  // Guardar en array correspondiente
+//			voltage_c = adc_value;
+//			adc_ConfigSingleChannel(&v_base); // Configurar el ADC para el siguiente canal
+//			flag_adc = 0; // Cambiar de nuevo al otro array
+//			index_collector ++;
+//			if (index_collector >= 100) {
+//				index_collector = 0;  // Reiniciar índice si llega a 100
+//			}
+//
+//		}
 
 			fsm_program.state = STATE_IDLE;
 			break;
