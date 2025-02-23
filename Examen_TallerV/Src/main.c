@@ -1242,6 +1242,9 @@ void parseCommands(char *ptrBufferReception){
 		        lcd_clear(&lcd);
 		        value = (adc_GetValue()*3.3)/4096;
 		        lcd_value(&lcd, value);
+			    lcd_gotoxy(&lcd, 1, 0);
+			    lcd_value(&lcd, adc_GetValue());
+
 		        usart_writeMsg(&commSerial, "Voltaje enviado.\n");
 
 		    }
