@@ -1,8 +1,7 @@
 ../Src/pll_driver_hal.c:15:6:configPLL	16	static,ignoring_inline_asm
 ../Src/pll_driver_hal.c:103:9:getConfigPLL	16	static
 ../Src/pll_driver_hal.c:131:10:getFreqPLL	8	static
-../Src/pll_driver_hal.c:149:6:FQ_MCO	16	static
-../Src/pll_driver_hal.c:154:6:configPresMCO1	16	static
-../Src/pll_driver_hal.c:162:6:configChannelMCO1	16	static
-../Src/pll_driver_hal.c:169:6:changeTrim	16	static
-../Src/pll_driver_hal.c:177:9:pllGetMainClock	4	static
+../Src/pll_driver_hal.c:150:6:configPresMCO1	16	static
+../Src/pll_driver_hal.c:158:6:configChannelMCO1	16	static
+../Src/pll_driver_hal.c:165:6:changeTrim	16	static
+../Src/pll_driver_hal.c:173:9:pllGetMainClock	4	static

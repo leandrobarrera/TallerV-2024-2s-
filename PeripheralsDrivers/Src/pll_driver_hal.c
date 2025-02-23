@@ -146,10 +146,6 @@ uint16_t getFreqPLL(void){
 	}
 }
 
-void FQ_MCO(channel){
-
-
-}
 
 void configPresMCO1(uint8_t prescaler){
 	//limpiamos

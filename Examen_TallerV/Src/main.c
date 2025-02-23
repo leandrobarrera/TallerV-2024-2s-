@@ -94,7 +94,7 @@ uint8_t meses = 0;
 uint16_t soles = 0;
 uint8_t flagshowtime = 0;
 uint16_t counter = 0;
-
+uint8_t potenciometro = 0;
 
 
 //variables para USART6
@@ -585,7 +585,7 @@ void init_system(void){
 
 	//Configuramos el puerto serial (USART2)
 	commSerial.ptrUSARTx				= USART6;
-	commSerial.USART_Config.baudrate    = USART_BAUDRATE_115200;
+	commSerial.USART_Config.baudrate    = USART_BAUDRATE_9600;
 	commSerial.USART_Config.datasize	= USART_DATASIZE_8BIT;
 	commSerial.USART_Config.parity		= USART_PARITY_NONE;
 	commSerial.USART_Config.stopbits	= USART_STOPBIT_1;
@@ -897,7 +897,7 @@ void show_time(void){
 	    minutos = getMinutes();
 		horas = getHour();
 		dias = getDia();
-		mes = getMes();
+		meses = getMes();
 		soles = getYear();
 
 	    // mostrar valores en la LCD. Se posiciona el cursor primero y luego la hora.
@@ -909,7 +909,12 @@ void show_time(void){
 	    lcd_value(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
 		lcd_gotoxy(&lcd, 1, 6);
 		lcd_value(&lcd,segundos);
-
+	    lcd_gotoxy(&lcd, 0, 20);
+	    lcd_value(&lcd, dias);
+	    lcd_gotoxy(&lcd, 0, 23);
+		lcd_value(&lcd, meses);
+		lcd_gotoxy(&lcd, 0, 26);
+		lcd_value(&lcd, soles);
 	}
 
 }
@@ -1121,8 +1126,6 @@ void parseCommands(char *ptrBufferReception){
 
 	else if (strcmp(cmd, "readVoltC")==0){
 		usart_writeMsg(&commSerial, "Read voltage of collector (mV) \n");
-		//adc_ConfigSingleChannel(&v_collector);
-		//adc_StartSingleConv();
 		sprintf(bufferData, "Voltage of collector: %lu mV\n", voltage_c);
 		usart_writeMsg(&commSerial, bufferData);
 
@@ -1205,6 +1208,8 @@ void parseCommands(char *ptrBufferReception){
 				lcdY = secondParameter;
 				lcd_gotoxy(&lcd,lcdX,lcdY);
 				usart_writeMsg(&commSerial, "Nueva coordenada establecida.\n");
+				lcd_cursor_blinky_Enable(&lcd);
+
 			}
 			else{
 				usart_writeMsg(&commSerial, "Linea fuera de rango.\n");
@@ -1216,7 +1221,7 @@ void parseCommands(char *ptrBufferReception){
 		        usart_writeMsg(&commSerial, "CMD: lcdVolt\n");
 		        // Cambiando el formato para presentar por el puerto serial
 		        lcd_data(&lcd, voltage_c);
-		        usart_writeMsg(&commSerial, "Pantalla limpiada.\n");
+		        usart_writeMsg(&commSerial, "Voltaje enviado.\n");
 
 		    }
 

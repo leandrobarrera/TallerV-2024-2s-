@@ -1,8 +1,7 @@
 ../Src/pll_driver_hal.c:15:6:configPLL	11
 ../Src/pll_driver_hal.c:103:9:getConfigPLL	5
 ../Src/pll_driver_hal.c:131:10:getFreqPLL	2
-../Src/pll_driver_hal.c:149:6:FQ_MCO	1
-../Src/pll_driver_hal.c:154:6:configPresMCO1	1
-../Src/pll_driver_hal.c:162:6:configChannelMCO1	1
-../Src/pll_driver_hal.c:169:6:changeTrim	1
-../Src/pll_driver_hal.c:177:9:pllGetMainClock	3
+../Src/pll_driver_hal.c:150:6:configPresMCO1	1
+../Src/pll_driver_hal.c:158:6:configChannelMCO1	1
+../Src/pll_driver_hal.c:165:6:changeTrim	1
+../Src/pll_driver_hal.c:173:9:pllGetMainClock	3
