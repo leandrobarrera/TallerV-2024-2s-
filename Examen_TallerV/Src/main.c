@@ -33,7 +33,7 @@
 #define minutoh		45
 #define horah		12
 #define diah		21
-#define mesh		2
+#define mesh		02
 #define solesh		25
 
 
@@ -59,10 +59,7 @@ GPIO_Handler_t pinBase = {0}; 		//	PinA7
 uint8_t valor = 0;
 uint8_t caso_transistor = 0;  //variable para hacer el switcheo de los transistores y encender el 7segmentos.
 uint8_t modo = 0;		//esta variable hace que cuando presionamos el boton y se manda la interrupcion en el micro, sume uno asi misma, cambiando de modo.
-uint8_t flag_usart = 0;	//bandera para el usart
 uint16_t contador = 0; //contador para el modo 4
-uint8_t changeModo = 0; //flag del EXTI 5 para cambiar los modos
-uint8_t flag_conteo = 0; //flag del contador para dejar de contar mientras estamos en los otros modos.
 uint8_t exti_Data = 0; // guarda el valor del data del EXTi cuando se lanza la interrupcion de Clock del Encoder.
 uint8_t flag_clock = 0; //bandera para el flag del clock.
 uint16_t exti_conteo = 0; //contador del Encoder.
@@ -181,7 +178,8 @@ void refresh (void);
 extern void configMagic(void);
 void configPresMCO1(uint8_t prescaler);
 void show_time(void);
-
+void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor);
+void lcd_value2(I2C_Handler_t *ptrHandlerLCDI2C, int valor);
 
 FSM_STATES fsm_function(uint8_t evento);
 
@@ -374,17 +372,6 @@ void init_system(void){
 	gpio_Config(&pinCollector);
 
 
-	/* pinBase */
-	pinBase.pGPIOx 							= 	GPIOA;
-	pinBase.pinConfig.GPIO_PinNumber		=	PIN_7;
-	pinBase.pinConfig.GPIO_PinMode			=	GPIO_MODE_ALTFN;
-	pinBase.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
-	pinBase.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
-	pinBase.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
-	pinBase.pinConfig.GPIO_PinAltFunMode	= 	AF2;
-
-
-	gpio_Config(&pinBase);
 
 
 	/* MCO2pin */
@@ -506,53 +493,6 @@ void init_system(void){
 	//	Encedemos el Timer.
 	timer_SetState(&display,SET);
 
-//
-//	/* Configuracion del PWM */
-//
-//	red_pwm.ptrTIMx = TIM4;
-//	red_pwm.config.channel = PWM_CHANNEL_3;
-//	red_pwm.config.periodo = 500;
-//	red_pwm.config.prescaler = 150; // freq 10us
-//	red_pwm.config.duttyCicle = 1; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (50%) */
-//
-//	/* Se carga el PWM con los parametros establecidos */
-//	pwm_Config(&red_pwm);
-//	pwm_Enable_Output(&red_pwm);
-//
-//	pwm_Start_Signal(&red_pwm);
-//
-//
-//
-//	collector.ptrTIMx = TIM3;
-//	collector.config.channel = PWM_CHANNEL_1;
-//	collector.config.periodo = 500;
-//	collector.config.prescaler = 50; // freq
-//	collector.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
-//
-//
-//	/* Se carga el PWM con los parametros establecidos */
-//	pwm_Config(&collector);
-//
-//	pwm_Enable_Output(&collector);
-//
-//	pwm_Start_Signal(&collector);
-//
-//	base.ptrTIMx = TIM3;
-//	base.config.channel = PWM_CHANNEL_2;
-//	base.config.periodo = 500;
-//	base.config.prescaler = 50; // freq
-//	base.config.duttyCicle = 500; /* Se define el ciclo de trabajo (dutty cycle) del PWM en 100 (25%) */
-//
-//
-//	/* Se carga el PWM con los parametros establecidos */
-//	pwm_Config(&base);
-//
-//	pwm_Enable_Output(&base);
-//
-//	pwm_Start_Signal(&base);
-
-
-
 
 
 
@@ -616,19 +556,6 @@ void init_system(void){
 	adc_ConfigSingleChannel(&v_collector);
 	adc_StartSingleConv();
 
-//	//ADC para leer voltaje de base. PinPC1
-//
-//	v_base.channel 					= CHANNEL_11;
-//	v_base.resolution 				= RESOLUTION_12_BIT;
-//	v_base.dataAlignment 			= ALIGNMENT_RIGHT;
-//	v_base.interruptState 			= ADC_INT_ENABLE;
-//	v_base.samplingPeriod 			= SAMPLING_PERIOD_112_CYCLES;
-
-	// no se carga esta config porque solo puede haber uno cargado, por algo se llama configsinglechannel
-
-	//cargamos la config.
-	//adc_ConfigSingleChannel(&v_base);
-	//adc_StartSingleConv();
 
 
 
@@ -888,6 +815,17 @@ void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor)
     lcd_putc(ptrHandlerLCDI2C, buffer);
 }
 
+void lcd_value2(I2C_Handler_t *ptrHandlerLCDI2C, int valor)
+{
+    char buffer[32];  // Buffer para almacenar el texto formateado
+
+    // 1) Convierte el valor numérico a texto usando sprintf. %d formatea un entero decimal
+    sprintf(buffer, "%02d", valor);
+
+    // 2) Llamada para imprimir la cadena
+    lcd_putc(ptrHandlerLCDI2C, buffer);
+}
+
 void show_time(void){
 
 	if(flagshowtime){
@@ -907,17 +845,17 @@ void show_time(void){
 	    lcd_gotoxy(&lcd, 0, 0);
 	    lcd_putc(&lcd,"La hora es:");
 	    lcd_gotoxy(&lcd, 1, 0);
-	    lcd_value(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
+	    lcd_value2(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
 	    lcd_gotoxy(&lcd, 1, 3);
-	    lcd_value(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
+	    lcd_value2(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
 		lcd_gotoxy(&lcd, 1, 6);
-		lcd_value(&lcd,segundos);
+		lcd_value2(&lcd,segundos);
 	    lcd_gotoxy(&lcd, 0, 20);
-	    lcd_value(&lcd, dias);
+	    lcd_value2(&lcd, dias);
 	    lcd_gotoxy(&lcd, 0, 23);
-		lcd_value(&lcd, meses);
+		lcd_value2(&lcd, meses);
 		lcd_gotoxy(&lcd, 0, 26);
-		lcd_value(&lcd, soles);
+		lcd_value2(&lcd, soles);
 	}
 
 }
@@ -957,24 +895,20 @@ void parseCommands(char *ptrBufferReception){
     // Este primer comando imprime una lista con los otros comandos que tiene el equipo
     if (strcmp(cmd, "help") == 0){
         usart_writeMsg(&commSerial, "Help Menu CMDs:\n");
-        usart_writeMsg(&commSerial, "1) help            -- Print this menu\n");
+        usart_writeMsg(&commSerial, "1) help           -- Print this menu\n");
         usart_writeMsg(&commSerial, "2) dummy #A #B    -- dummy cmd, #A and #B are uint32_t\n");
-        usart_writeMsg(&commSerial, "3) setPeriod    -- insert the period of the blinky\n");
-        usart_writeMsg(&commSerial, "4) setFreq # -- Change the Led_state period (ms) \n");
-        usart_writeMsg(&commSerial, "5) setDutty # -- Change the duty cycle (%), ENTRE 1 Y 99:LED & 1-1000 para FRC\n");
-        usart_writeMsg(&commSerial, "6) setNumber # -- Change displayed number\n");
-        usart_writeMsg(&commSerial, "7) setVoltage # -- PWM-DAC output in mV\n");
-        usart_writeMsg(&commSerial, "8) setVoltB # -- PWM-DAC output for base (mV)\n");
-        usart_writeMsg(&commSerial, "9) setVoltC # -- PWM-DAC output for collector (mV)\n");
-        usart_writeMsg(&commSerial, "10) readVoltB # -- ADC value for base (mV)\n");
-        usart_writeMsg(&commSerial, "11) readVoltC # -- ADC value for collector (mV)\n");
-        usart_writeMsg(&commSerial, "12) lcdClear #  -- Clear LCD\n");
-        usart_writeMsg(&commSerial, "13) lcdCursor   -- on-off cursor LCD");
-        usart_writeMsg(&commSerial, "14) lcdLine     -- move cursor to line\n");
-        usart_writeMsg(&commSerial, "15) lcdXY       -- move cursor to X-line/Y-pos\n");
-        usart_writeMsg(&commSerial, "16) lcdVolt     -- read volt and show in LCD\n");
-        usart_writeMsg(&commSerial, "17) time     -- shows time now.\n");
-        usart_writeMsg(&commSerial, "18) MCO1     -- Change signal MCO1 HSI-LSE-HSE-PLL/DIV2(4)-DIV3(5)-DIV4(6)-DIV5(7).\n");
+        usart_writeMsg(&commSerial, "3) setPeriod      -- insert the period of the blinky\n");
+        usart_writeMsg(&commSerial, "4) setFreq #      -- Change the Led_state period (ms) \n");
+        usart_writeMsg(&commSerial, "5) setDutty #     -- Change the duty cycle (%), ENTRE 1 Y 99:LED & 1-1000 para FRC\n");
+        usart_writeMsg(&commSerial, "6) setNumber #    -- Change displayed number\n");
+        usart_writeMsg(&commSerial, "7) lcdClear #     -- Clear LCD\n");
+        usart_writeMsg(&commSerial, "8) lcdCursor      -- on-off cursor LCD");
+        usart_writeMsg(&commSerial, "9) lcdLine #      -- move cursor to line\n");
+        usart_writeMsg(&commSerial, "10) lcdXY #       -- move cursor to X-line/Y-pos\n");
+        usart_writeMsg(&commSerial, "11) lcdVolt #     -- read volt and show in LCD\n");
+        usart_writeMsg(&commSerial, "12) time #        -- shows time now. time 1 = mostrar hora, time 0 = quitar hora. Para salir del comando: time 0.\n");
+        usart_writeMsg(&commSerial, "13) MCO1 #        -- Change signal MCO1 para: HS1 = 0, LSE = 1, HSE = 2, PLL = 3.\n");
+        usart_writeMsg(&commSerial, "-------------------- los prescaler: DIV(2) = 4, DIV(3) = 5, DIV(4) = 6, DIV(5) = 7.\n");
 
     }
 
@@ -1044,7 +978,6 @@ void parseCommands(char *ptrBufferReception){
 				sprintf(bufferData, "Valor de la nueva freq^⁻1 en ms: %lu\n", secondParameter);
 				usart_writeMsg(&commSerial, bufferData);
 				if (secondParameter>0){
-					//pwm_Update_Frequency(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Freq RC updated\n");
 				}
 				else{
@@ -1072,7 +1005,6 @@ void parseCommands(char *ptrBufferReception){
 			sprintf(bufferData, "Valor del nuevo duty: %lu\n", secondParameter);
 			usart_writeMsg(&commSerial, bufferData);
 				if (secondParameter<=1000 && secondParameter>=1 ){
-					//pwm_Update_DuttyCycle(&filtroRC, secondParameter);
 					usart_writeMsg(&commSerial, "Duty cicle updated\n");
 				}
 				else{
@@ -1087,10 +1019,6 @@ void parseCommands(char *ptrBufferReception){
 	else if (strcmp(cmd, "setVoltage")==0){
 			usart_writeMsg(&commSerial, "cmd: setVoltage\n");
 			if (firstParameter<=3300 && firstParameter>=1){
-
-				//dutty = filtroRC.config.periodo * firstParameter / 3300;
-				//dutty = (int) (firstParameter * 2)/33 ;
-				//pwm_Update_DuttyCycle(&filtroRC, dutty);
 				sprintf(bufferData, "Voltage: %lu mV\n", firstParameter);
 				usart_writeMsg(&commSerial, bufferData);
 			}
@@ -1133,8 +1061,6 @@ void parseCommands(char *ptrBufferReception){
 
 	else if (strcmp(cmd, "readVoltB")==0){
 		usart_writeMsg(&commSerial, "Read voltage of base (mV) \n");
-		//adc_ConfigSingleChannel(&v_base);
-		//adc_StartSingleConv();
 		sprintf(bufferData, "Voltage of base: %lu mV\n", voltage_b);
 		usart_writeMsg(&commSerial, bufferData);
 
@@ -1149,41 +1075,7 @@ void parseCommands(char *ptrBufferReception){
 
 	}
 
-	else if (strcmp(cmd, "analyzeIcVb") == 0) {
-	    uint16_t baseVoltages[137];  // Voltajes en la base (mV)
-	    uint16_t collectorVoltages[137];  // Voltajes en el colector (mV)
-	    float collectorCurrents[137];  // Corriente en el colector (mA)
-	    uint16_t resistanceC = 220;  // Resistencia del colector en ohmios
-	    uint16_t supplyVoltage = 1000;  // Voltaje de alimentación en mV
-	    float leakageCurrent = 1e-12;  // Corriente de saturación inversa (1 pA)
-	    float thermalVoltage = 25.0;  // Voltaje térmico en mV
-	    float minBaseVoltage = 0.5;  // Voltaje base mínimo (500 mV)
-	    float maxBaseVoltage = 0.85;  // Ajustado para alcanzar Ic ≈ 13mA
-	    char formattedData[64];  // Buffer para salida formateada
 
-	    usart_writeMsg(&commSerial, "Vb (mV), Vc (mV), Ic (mA)\n");
-
-	    for (int index = 0; index < 137; index++) {
-	        // Generar valores de Vb de forma equidistante
-	        float baseEmitterVoltage = minBaseVoltage + ((maxBaseVoltage - minBaseVoltage) * (float)index / 136);
-	        baseVoltages[index] = (uint16_t)(baseEmitterVoltage * 1000);  // Convertir a mV
-
-	        // Calcular corriente del colector usando ecuación exponencial
-	        collectorCurrents[index] = leakageCurrent * (exp(baseEmitterVoltage / thermalVoltage) - 1);
-	        collectorCurrents[index] *= 1000;  // Convertir a mA
-
-	        // Simular el voltaje del colector considerando caída en Rc
-	        collectorVoltages[index] = supplyVoltage - (uint16_t)(collectorCurrents[index] * resistanceC);
-
-	        // Extraer parte entera y decimal de la corriente
-	        int integerPart = (int)collectorCurrents[index];
-	        int decimalPart = (int)roundf((collectorCurrents[index] - integerPart) * 100);
-
-	        // Formatear salida como CSV en formato "Vb, Vc, Ic"
-	        sprintf(formattedData, "%u, %u, %d.%02d\n", baseVoltages[index], collectorVoltages[index], integerPart, decimalPart);
-	        usart_writeMsg(&commSerial, formattedData);
-	    }
-	}
 
 	else if (strcmp(cmd, "lcdClear") == 0){
 	        usart_writeMsg(&commSerial, "CMD: lcdClear\n");
@@ -1192,6 +1084,7 @@ void parseCommands(char *ptrBufferReception){
 	        usart_writeMsg(&commSerial, "Pantalla limpiada.\n");
 
 	    }
+
 	else if (strcmp(cmd, "lcdCursor") == 0){
 			usart_writeMsg(&commSerial, "CMD: lcdCursor\n");
 			if (firstParameter == 1){
@@ -1241,10 +1134,14 @@ void parseCommands(char *ptrBufferReception){
 		        // Cambiando el formato para presentar por el puerto serial
 		        lcd_clear(&lcd);
 		        value = (adc_GetValue()*3.3)/4096;
-		        lcd_value(&lcd, value);
+		        lcd_gotoxy(&lcd, 0, 0);
+		        lcd_putc(&lcd, "Valor del voltaje(V) es:");
 			    lcd_gotoxy(&lcd, 1, 0);
+		        lcd_value(&lcd, value);
+			    lcd_gotoxy(&lcd, 0, 20);
+		        lcd_putc(&lcd, "En ADC seria:");
+			    lcd_gotoxy(&lcd, 1, 20);
 			    lcd_value(&lcd, adc_GetValue());
-
 		        usart_writeMsg(&commSerial, "Voltaje enviado.\n");
 
 		    }
@@ -1321,79 +1218,6 @@ FSM_STATES fsm_function(uint8_t evento){
 		printf("ms: %d\n", conteo_ms);
 
 
-		switch(modo){
-
-			case 0:
-				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 99);
-				//pwm_Start_Signal(&red_pwm);
-				//gpio_WritePin(&LedRed, 1);
-				gpio_WritePin(&LedBlue, 0);
-				modo ++;
-
-				break;
-			case 1:
-				gpio_WritePin(&LedGreen, 1);
-				//gpio_WritePin(&LedRed, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 1);
-				//pwm_Stop_Signal(&red_pwm);
-				//pwm_Disable_Output(&red_pwm);
-				gpio_WritePin(&LedBlue, 0);
-				modo ++;
-				break;
-			case 2:
-				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 1);
-				//pwm_Stop_Signal(&red_pwm);
-				//pwm_Disable_Output(&red_pwm);
-				//gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedBlue, 1);
-				modo ++;
-				break;
-			case 3:
-				gpio_WritePin(&LedGreen, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 1);
-				//pwm_Stop_Signal(&red_pwm);
-				//pwm_Disable_Output(&red_pwm);
-				//gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedBlue, 1);
-				modo ++;
-				break;
-			case 4:
-				gpio_WritePin(&LedGreen, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 99);
-				//pwm_Start_Signal(&red_pwm);
-				//gpio_WritePin(&LedRed, 1);
-				gpio_WritePin(&LedBlue, 1);
-				modo ++;
-				break;
-			case 5:
-				gpio_WritePin(&LedGreen, 1);
-				//gpio_WritePin(&LedRed, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 99);
-				//pwm_Start_Signal(&red_pwm);
-				gpio_WritePin(&LedBlue, 0);
-				modo ++;
-				break;
-			case 6:
-				gpio_WritePin(&LedGreen, 1);
-				//gpio_WritePin(&LedRed, 1);
-				pwm_Update_DuttyCycle(&red_pwm, 99);
-				//pwm_Start_Signal(&red_pwm);
-				gpio_WritePin(&LedBlue, 1);
-				modo ++;
-				break;
-			case 7:
-				gpio_WritePin(&LedGreen, 0);
-				//gpio_WritePin(&LedRed, 0);
-				gpio_WritePin(&LedBlue, 0);
-				pwm_Update_DuttyCycle(&red_pwm, 1);
-				//pwm_Stop_Signal(&red_pwm);
-				//pwm_Disable_Output(&red_pwm);
-				modo = 0;
-				break;
-
-			}
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
@@ -1409,7 +1233,6 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_REFRESH_DISPLAY:{
 		refresh();
-		//adc_StartSingleConv();
 		counter++;
 		if(counter == 1000){
 			show_time();
@@ -1445,31 +1268,6 @@ FSM_STATES fsm_function(uint8_t evento){
 //			}
 
 
-//		uint16_t adc_value = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
-//		 if (flag_adc == 0) {
-//				adc_array_base[index_base] = adc_value;  // Guardar valor en la posición actual
-//				voltage_b = adc_value;
-//				adc_ConfigSingleChannel(&v_collector); // Configurar el ADC para el siguiente canal
-//				flag_adc = 1; // Cambiar al otro array en la siguiente lectura
-//				index_base ++;
-//
-//				if (index_base >= 100) {
-//					index_base = 0;  // Reiniciar índice si llega a 100
-//
-//				}
-//
-//
-//		} else if(flag_adc == 1){
-//			adc_array_collector[index_collector] = adc_value;  // Guardar en array correspondiente
-//			voltage_c = adc_value;
-//			adc_ConfigSingleChannel(&v_base); // Configurar el ADC para el siguiente canal
-//			flag_adc = 0; // Cambiar de nuevo al otro array
-//			index_collector ++;
-//			if (index_collector >= 100) {
-//				index_collector = 0;  // Reiniciar índice si llega a 100
-//			}
-//
-//		}
 
 			fsm_program.state = STATE_IDLE;
 			break;
@@ -1501,7 +1299,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 void Timer2_Callback(void){
 	fsm_program.state = STATE_REFRESH_DISPLAY;
-	//adc_StartSingleConv();
+
 }
 
 /* este el callback del Led de estado, usamos el TooglePin para que se enciende y se apague, es la unico para loode			=	GPIO_MODE_
@@ -1534,7 +1332,7 @@ void usart6_RxCallback(void){
 
 void adc_CompleteCallback (void){
 	fsm_program.state = STATE_READ_ADC;
-	 //adc_data = adc_GetValue();
+
 
 }
 
