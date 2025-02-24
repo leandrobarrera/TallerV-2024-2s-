@@ -29,10 +29,12 @@
 #define BUFFER_SIZE 						64
 #define ARRAY_SIZE 100  // 100 muestras por array
 #define LCD_ADDRESS 0b00100010
+
+//CAMBIAR ANTES DE BUILDEAR, AQUI EMPIEZA A CONTAR Y TOMA LA FECHA.
 #define segundoh		21
 #define minutoh		45
 #define horah		12
-#define diah		21
+#define diah		25
 #define mesh		02
 #define solesh		25
 
@@ -84,17 +86,20 @@ uint8_t decenas = 0;
 uint8_t centenas = 0;
 uint8_t millares = 0;
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
-uint8_t segundos = 0;
-uint8_t minutos = 0;
-uint8_t horas = 0;
-uint8_t dias = 0;
-uint8_t meses = 0;
-uint16_t soles = 0;
-uint8_t flagshowtime = 0;
-uint16_t counter = 0;
+uint8_t segundos = 0;	//variable para almacenar segundos
+uint8_t minutos = 0;	//variable para almacenar minutos
+uint8_t horas = 0;	//variable para almacenar horas
+uint8_t dias = 0;	//variable para almacenar dias
+uint8_t meses = 0;	//variable para almacenar meses
+uint16_t soles = 0;	//variable para almacenar las veces que la tierra le ha dado la vuelta al sol
+uint8_t flagshowtime = 0;	//flag para mostrar la hora, 1 la muestra.
+uint16_t counter = 0;	//contador para hacer la actualizacion de los segundos
 uint8_t potenciometro = 0;
 uint8_t index_potenciometro = 0;
-float value = 0;
+float value = 0;	//valor de adc
+uint8_t changeModo = 0; //flag del EXTI 5 para cambiar los modos
+uint8_t flag_conteo = 0; //flag del contador para dejar de contar mientras estamos en los otros modos.
+uint8_t flag_usart = 0;	//bandera para el usart
 
 
 //variables para USART6
@@ -173,13 +178,13 @@ void init_system(void);
 void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
 void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
-void giro (void);
-void refresh (void);
-extern void configMagic(void);
-void configPresMCO1(uint8_t prescaler);
-void show_time(void);
-void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor);
-void lcd_value2(I2C_Handler_t *ptrHandlerLCDI2C, int valor);
+void giro (void);								//funcion responsable de sumar o restar en el conteo del 7segmentos.
+void refresh (void);							//funcion para refrescar el 7segmentos.
+extern void configMagic(void);					//Magic!
+void configPresMCO1(uint8_t prescaler);			//funcion para insertar el divisor, y ajustar el prescaler
+void show_time(void);							//funcion para mostrar el tiempo en la LCD
+void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor);	//funcion para mostrar variables en la LCD, esta recibe float. ADC
+void lcd_value2(I2C_Handler_t *ptrHandlerLCDI2C, int valor);	//funcion para mostrar variables en la LCD, esta recibe int. Tiempo
 
 FSM_STATES fsm_function(uint8_t evento);
 
@@ -188,15 +193,15 @@ FSM_STATES fsm_function(uint8_t evento);
 int main(void)
 {
 	configPLL(100);
-	config_SysTick_ms(2);
-	init_system();
-	configMagic();
-	configChannelMCO1(0b11);
-	configPresMCO1(MCO1_PRESCALER_DIV_5);
+	config_SysTick_ms(2);	//el argumento 2 es el PLL. 0b11 en binario
+	init_system();			//carga configs.
+	configMagic();			//magic!
+	configChannelMCO1(0b11);		//pone el PLL.
+	configPresMCO1(MCO1_PRESCALER_DIV_5);	//divide entre 5 los 100Mhz del PLL, MCO = 20 MHz
 
-	config_RTC();
+	config_RTC();	//configs de RTC
 	enableRTCChange();
-	setSegundos(segundoh);
+	setSegundos(segundoh);	//carga los define del tiempo. Recordar ajustarlos para cuando se buildee y tener la hora de cuando se ejecuta.
 	setHour(horah) ;
 	setMinutes(minutoh);
 	setDia(diah);
@@ -374,8 +379,8 @@ void init_system(void){
 
 
 
-	/* MCO2pin */
-	MCO.pGPIOx 							= 	GPIOA;
+	/* MCO1pin */
+	MCO.pGPIOx 								= 	GPIOA;
 	MCO.pinConfig.GPIO_PinNumber			=	PIN_8;
 	MCO.pinConfig.GPIO_PinMode				=	GPIO_MODE_ALTFN;
 	MCO.pinConfig.GPIO_PinOutputType		=	GPIO_OTYPE_PUSHPULL;
@@ -460,7 +465,7 @@ void init_system(void){
 	/*esto es lo nuevo, esta forma de cargar las configuraciones de los Handlers de los timers es parecida a
 	 * los del GPIO, la primera fila para definir el que queremos usar (quedan a eleccion del programador) no obstante
 	 * en la tarea se nos pide que usemos ciertos timers con cierto numero especifico de bits, 32 para unos y 16 para otros.
-	 * Por tanto se uso esta escogencia. En la segunda fila del prescaler se usa el 16000 para que durante todo este
+	 * Por tanto se uso esta escogencia. En la segunda fila del prescaler se usa el 16000 y en PLL 100 000 para que durante todo este
 	 * proceso de interrupciones, y teniendo que el micro va a 16MHz, el 16000 divide esta cifra y la deja en un formato de
 	 * 1 ms. Este 1 ms se multiplica por el periodo, y lo elegimos segun lo que requiramos. Para el TIM2 pusimos 1000
 	 * que 1ms * 1000, nos da 1000ms lo que es igual a 1 segundo, lo que completa nuestro deseo que este contador de segundos
@@ -544,9 +549,10 @@ void init_system(void){
 
 	/* Configuramos el ADC */
 
-	//ADC para leer voltaje de colector. Pin PC0
+	//ADC para leer voltaje del potenciometro. Pin PA5
+	//se dejo el nombre por miedo a mover algo y dañarlo :D.
 
-	v_collector.channel 			= CHANNEL_0;
+	v_collector.channel 			= CHANNEL_5;
 	v_collector.resolution 			= RESOLUTION_12_BIT;
 	v_collector.dataAlignment 		= ALIGNMENT_RIGHT;
 	v_collector.interruptState 		= ADC_INT_ENABLE;
@@ -743,66 +749,83 @@ void separador_numero (uint16_t valor){
 }
 
 void giro (void){
-	if(exti_Data){
-
-		if(exti_conteo == 4095){
-			exti_conteo = 0;
-			}
-		else{ printf("CW derecha\n");
-			exti_conteo ++;
-		}
-	}
-	//se hicieorn correctamente los reinicios tanto si pasamos de 4095 a como si nos devolvemos desde 0.
-		else{
-			if(exti_conteo == 0){
-				exti_conteo = 4095;
-			}
-			else{ printf("CCW izquierda\n");
-				exti_conteo--;
-			}
-		}
+    // Verifica si exti_Data es verdadero
+    if(exti_Data){
+        // Si exti_conteo alcanza su valor máximo (4095), se reinicia a 0
+        if(exti_conteo == 4095){
+            exti_conteo = 0;
+        }
+        else{
+            printf("CW derecha\n"); // Indica que el giro es en sentido horario (ClockWise) en el Magic!
+            exti_conteo++; // Incrementa el contador
+        }
+    }
+    // Si exti_Data es falso, el conteo debe disminuir (giro en sentido antihorario)
+    else{
+        // Si el contador está en 0, se reinicia a 4095 para mantener el ciclo continuo
+        if(exti_conteo == 0){
+            exti_conteo = 4095;
+        }
+        else{
+            printf("CCW izquierda\n"); // Indica que el giro es en sentido antihorario (Counter ClockWise)
+            exti_conteo--; // Decrementa el contador
+        }
+    }
 }
 
 void refresh (void){
-	siete_segmentos = exti_conteo;
-	separador_numero(siete_segmentos);
-		switch(caso_transistor){
-			case 0:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor ++;
-				break;
-			}
-			case 1:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor ++;
-				break;
-			}
-			case 2:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor ++;
-				break;
-			}
-			case 3:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor = 0;
-				break;
-			}
+    // Asigna el valor de exti_conteo a la variable siete_segmentos,
+    // que representa el número a mostrar en el display de 7 segmentos.
+    siete_segmentos = exti_conteo;
 
-		}
+    // Separa el número en sus respectivas cifras (unidades, decenas, centenas, etc.)
+    separador_numero(siete_segmentos);
+
+    // Maneja el ciclo de activación de los transistores que controlan los segmentos del display
+    switch(caso_transistor){
+        case 0:{
+            // Activa el transistor correspondiente a la primera posición del display
+            switcheo_transistor(caso_transistor);
+            caso_transistor++; // Pasa al siguiente transistor
+            break;
+        }
+        case 1:{
+            // Activa el transistor correspondiente a la segunda posición del display
+            switcheo_transistor(caso_transistor);
+            caso_transistor++;
+            break;
+        }
+        case 2:{
+            // Activa el transistor correspondiente a la tercera posición del display
+            switcheo_transistor(caso_transistor);
+            caso_transistor++;
+            break;
+        }
+        case 3:{
+            // Activa el transistor correspondiente a la cuarta posición del display
+            switcheo_transistor(caso_transistor);
+            caso_transistor = 0; // Reinicia el ciclo al primer transistor
+            break;
+        }
+    }
 }
 
 void analizeRecievedChar(void){
-	if(commSerial.receivedChar !='\0'){
-		bufferReception[counterReception] = commSerial.receivedChar;
-		counterReception++;
+    // Verifica si se ha recibido un caracter valido (diferente de '\0')
+    if(commSerial.receivedChar != '\0'){
+        // Almacena el caracter recibido en el buffer de recepcion
+        bufferReception[counterReception] = commSerial.receivedChar;
+        counterReception++; // Incrementa el contador del buffer
 
-		if (commSerial.receivedChar == '@'){
-			bufferReception[counterReception] = '\0';
-			counterReception = 0;
-			fsm_program.state = STATE_COMMAND_COMPLETE;
-		}
-	}
+        // Si el caracter recibido es '@', se interpreta como el final del comando
+        if (commSerial.receivedChar == '@'){
+            bufferReception[counterReception] = '\0'; // Agrega terminador de cadena
+            counterReception = 0; // Reinicia el contador para el proximo mensaje
+            fsm_program.state = STATE_COMMAND_COMPLETE; // Cambia el estado de la FSM a "comando completo"
+        }
+    }
 }
+
 
 void lcd_value(I2C_Handler_t *ptrHandlerLCDI2C, float valor)
 {
@@ -828,37 +851,53 @@ void lcd_value2(I2C_Handler_t *ptrHandlerLCDI2C, int valor)
 
 void show_time(void){
 
-	if(flagshowtime){
+    // Verifica si la bandera para mostrar la hora esta activa
+    if(flagshowtime){
 
-	    lcd_clear(&lcd);
-	    lcd_gotoxy(&lcd, 0, 0);
+        // Limpia la pantalla de la LCD
+        lcd_clear(&lcd);
 
-	    //lee la hora.
-		segundos = getSegundos();
-	    minutos = getMinutes();
-		horas = getHour();
-		dias = getDia();
-		meses = getMes();
-		soles = getYear();
+        // Posiciona el cursor en la primera columna de la primera fila
+        lcd_gotoxy(&lcd, 0, 0);
 
-	    // mostrar valores en la LCD. Se posiciona el cursor primero y luego la hora.
-	    lcd_gotoxy(&lcd, 0, 0);
-	    lcd_putc(&lcd,"La hora es:");
-	    lcd_gotoxy(&lcd, 1, 0);
-	    lcd_value2(&lcd,horas); lcd_gotoxy(&lcd, 1, 2); lcd_putc(&lcd,":");
-	    lcd_gotoxy(&lcd, 1, 3);
-	    lcd_value2(&lcd,minutos); lcd_gotoxy(&lcd, 1, 5); lcd_putc(&lcd,":");
-		lcd_gotoxy(&lcd, 1, 6);
-		lcd_value2(&lcd,segundos);
-	    lcd_gotoxy(&lcd, 0, 20);
-	    lcd_value2(&lcd, dias);
-	    lcd_gotoxy(&lcd, 0, 23);
-		lcd_value2(&lcd, meses);
-		lcd_gotoxy(&lcd, 0, 26);
-		lcd_value2(&lcd, soles);
-	}
+        // Lee la hora desde el RTC del microcontrolador
+        segundos = getSegundos();
+        minutos = getMinutes();
+        horas = getHour();
+        dias = getDia();
+        meses = getMes();
+        soles = getYear();
 
+        // Muestra el texto "La hora es:" en la LCD
+        lcd_gotoxy(&lcd, 0, 0);
+        lcd_putc(&lcd,"La hora es:");
+
+        // Muestra la hora en formato HH:MM:SS
+        lcd_gotoxy(&lcd, 1, 0);
+        lcd_value2(&lcd,horas);
+        lcd_gotoxy(&lcd, 1, 2);
+        lcd_putc(&lcd,":");
+
+        lcd_gotoxy(&lcd, 1, 3);
+        lcd_value2(&lcd,minutos);
+        lcd_gotoxy(&lcd, 1, 5);
+        lcd_putc(&lcd,":");
+
+        lcd_gotoxy(&lcd, 1, 6);
+        lcd_value2(&lcd,segundos);
+
+        // Muestra la fecha en la LCD
+        lcd_gotoxy(&lcd, 0, 20);
+        lcd_value2(&lcd, dias);
+
+        lcd_gotoxy(&lcd, 0, 23);
+        lcd_value2(&lcd, meses);
+
+        lcd_gotoxy(&lcd, 0, 26);
+        lcd_value2(&lcd, soles);
+    }
 }
+
 
 
 float adc_CalculateAverageVoltage(uint16_t *adc_array, uint16_t size) {
@@ -902,13 +941,15 @@ void parseCommands(char *ptrBufferReception){
         usart_writeMsg(&commSerial, "5) setDutty #     -- Change the duty cycle (%), ENTRE 1 Y 99:LED & 1-1000 para FRC\n");
         usart_writeMsg(&commSerial, "6) setNumber #    -- Change displayed number\n");
         usart_writeMsg(&commSerial, "7) lcdClear #     -- Clear LCD\n");
-        usart_writeMsg(&commSerial, "8) lcdCursor      -- on-off cursor LCD");
-        usart_writeMsg(&commSerial, "9) lcdLine #      -- move cursor to line\n");
-        usart_writeMsg(&commSerial, "10) lcdXY #       -- move cursor to X-line/Y-pos\n");
-        usart_writeMsg(&commSerial, "11) lcdVolt #     -- read volt and show in LCD\n");
+        usart_writeMsg(&commSerial, "8) lcdCursor      -- on-off cursor LCD. firstParameter = 1 (ON), cualquier otro valor (OFF)\n");
+        usart_writeMsg(&commSerial, "9) lcdLine #      -- move cursor to line, firstParameter [0,1]\n");
+        usart_writeMsg(&commSerial, "10) lcdXY # #     -- move cursor to X-line/Y-pos. firstparameter: [0,1] & secondParameter: [0,39]\n");
+        usart_writeMsg(&commSerial, "11) lcdVolt #     -- read volt and adc value, show in LCD\n");
         usart_writeMsg(&commSerial, "12) time #        -- shows time now. time 1 = mostrar hora, time 0 = quitar hora. Para salir del comando: time 0.\n");
-        usart_writeMsg(&commSerial, "13) MCO1 #        -- Change signal MCO1 para: HS1 = 0, LSE = 1, HSE = 2, PLL = 3.\n");
+        usart_writeMsg(&commSerial, "13) MCO1 # #      -- Change signal MCO1 para: HS1 = 0, LSE = 1, HSE = 2, PLL = 3.\n");
         usart_writeMsg(&commSerial, "-------------------- los prescaler: DIV(2) = 4, DIV(3) = 5, DIV(4) = 6, DIV(5) = 7.\n");
+        usart_writeMsg(&commSerial, "		IMPORTANTE: Limpiar pantalla de la LCD para probar cada comando.\n");
+
 
     }
 
@@ -1103,6 +1144,7 @@ void parseCommands(char *ptrBufferReception){
 				if (firstParameter<=1 && firstParameter>=0){
 					lcdX = firstParameter;
 					lcd_gotoxy(&lcd,lcdX,lcdY);
+					lcd_cursor_blinky_Enable(&lcd);
 			        usart_writeMsg(&commSerial, "Linea ajustada.\n");
 				}
 				else{
@@ -1112,8 +1154,8 @@ void parseCommands(char *ptrBufferReception){
 
 				}
 	else if (strcmp(cmd, "lcdXY") == 0){
-			usart_writeMsg(&commSerial, "CMD: lcdLine\n");
-			if (firstParameter<=1 && firstParameter>=0 && secondParameter<=19&& secondParameter>=0){
+			usart_writeMsg(&commSerial, "CMD: lcdXY\n");
+			if (firstParameter<=1 && firstParameter>=0 && secondParameter<=39&& secondParameter>=0){
 				lcdX = firstParameter;
 				lcdY = secondParameter;
 				lcd_gotoxy(&lcd,lcdX,lcdY);
@@ -1204,84 +1246,95 @@ void parseCommands(char *ptrBufferReception){
 
 
 
+
+
 FSM_STATES fsm_function(uint8_t evento){
 
 	switch(evento){
 	case STATE_IDLE:{
-
-
+		// Estado inactivo, no realiza ninguna acción
 		break;
 	}
-	case STATE_MODO_RGB:{
 
+	case STATE_MODO_RGB:{
+		// Modo RGB, imprime información de estado y tiempo en consola
 		printf("SW\n");
 		printf("ms: %d\n", conteo_ms);
 
-
+		// Luego de ejecutar la acción, vuelve a estado inactivo
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
 
 	case STATE_GIRO_ENCODER:{
-
+		// Llama a la función que maneja el giro del encoder
 		giro();
+		// Actualiza la visualización
 		refresh();
+		// Vuelve a estado inactivo
 		fsm_program.state = STATE_IDLE;
 		break;
-
 	}
 
 	case STATE_REFRESH_DISPLAY:{
+		// Refresca la pantalla o display
 		refresh();
+		// Incrementa un contador para determinar cuando mostrar la hora
 		counter++;
 		if(counter == 1000){
+			// Muestra la hora cada 1000 iteraciones
 			show_time();
-			counter = 0;
+			counter = 0; // Reinicia el contador
 		}
+		// Vuelve a estado inactivo
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
 
 	case STATE_CHAR_RECEIVED:{
+		// Estado cuando se recibe un carácter por el puerto serial
 		fsm_program.state = STATE_IDLE;
+		// Analiza el carácter recibido
 		analizeRecievedChar();
-			if(fsm_program.state == STATE_COMMAND_COMPLETE){
-				parseCommands(bufferReception);
-			}
-			fsm_program.state = STATE_IDLE;
-			break;
-
+		// Si se completa un comando, lo procesa
+		if(fsm_program.state == STATE_COMMAND_COMPLETE){
+			parseCommands(bufferReception);
+		}
+		// Vuelve a estado inactivo
+		fsm_program.state = STATE_IDLE;
+		break;
 	}
 
 	case STATE_COMMAND_COMPLETE:{
-
-			break;
+		// Estado cuando se completa un comando, no realiza acción adicional
+		break;
 	}
 
 	case STATE_READ_ADC:{
+		// Estado para leer el ADC (desactivado en este código, posiblemente para pruebas futuras)
 		fsm_program.state = STATE_IDLE;
 
-//		adc_array_potenciometro[index_potenciometro] = adc_GetValue(); // Leer ADC (12 bits, almacenado en uint16_t)
-//		index_potenciometro ++;
-//		if (index_potenciometro >= 100) {
-//			index_potenciometro = 0;  // Reiniciar índice si llega a 100
-//			}
+		// Código comentado que almacena valores de ADC en un array
+		// adc_array_potenciometro[index_potenciometro] = adc_GetValue();
+		// index_potenciometro ++;
+		// if (index_potenciometro >= 100) {
+		// 	index_potenciometro = 0;  // Reiniciar índice si llega a 100
+		// }
 
-
-
-			fsm_program.state = STATE_IDLE;
-			break;
-
+		// Vuelve a estado inactivo
+		fsm_program.state = STATE_IDLE;
+		break;
 	}
-		default: {
+
+	default: {
+		// Estado por defecto, vuelve a estado inactivo
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
 	}
-	return 	fsm_program.state;
-
+	// Retorna el estado actual de la máquina de estados
+	return fsm_program.state;
 }
-
 
 
 
@@ -1321,20 +1374,29 @@ void callback_ExtInt0(void){
 }
 
 void callback_ExtInt4(void){
-	fsm_program.state = STATE_MODO_RGB;
-	conteo_ms = getTicks_ms();
+    // Esta función se ejecuta cuando se detecta una interrupción externa en el pin 4
+    // Cambia el estado de la FSM a STATE_MODO_RGB
+    fsm_program.state = STATE_MODO_RGB;
+
+    // Captura el tiempo actual en milisegundos para su uso en el modo RGB
+    conteo_ms = getTicks_ms();
 }
 
 void usart6_RxCallback(void){
-	fsm_program.state = STATE_CHAR_RECEIVED;
-	receivedChar = usart_getRxData(&commSerial);
+    // Esta función se ejecuta cuando se recibe un dato por la USART6
+    // Cambia el estado de la FSM a STATE_CHAR_RECEIVED para procesar el carácter recibido
+    fsm_program.state = STATE_CHAR_RECEIVED;
+
+    // Almacena el carácter recibido en la variable correspondiente
+    receivedChar = usart_getRxData(&commSerial);
 }
 
 void adc_CompleteCallback (void){
-	fsm_program.state = STATE_READ_ADC;
-
-
+    // Esta función se ejecuta cuando se completa una conversión ADC
+    // Cambia el estado de la FSM a STATE_READ_ADC para procesar el dato convertido
+    fsm_program.state = STATE_READ_ADC;
 }
+
 
 /*
  *  Esta funcion sirve para detectar problemas de parametros
