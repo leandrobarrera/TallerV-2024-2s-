@@ -1,22 +1,331 @@
-Pines 
-userLed C6
-Led A A5
-Led B A7
-Led C C11
-Led D A4
-Led E A1
-Led F A6
-Led G C12
-switcheoUnidades C8
-switcheoDecenas B6
-switcheoCentenas A9
-switcheoMillares A8
-LedRed B8
-LedGreen B9
-LedBlue C9
-PinSW C2
-pinData C1
-pinClock B13
+Inicialización del RTC (config_RTC)
 
-PH0 NO TOMAR
-D2 NO TOMAR
+    Habilitación del reloj para el PWR
+        Se activa el bit PWREN en RCC->APB1ENR para permitir el acceso a los registros del módulo PWR.
+
+    Desbloqueo de la protección de backup
+        Se activa el bit DBP en PWR->CR, lo que permite modificar los registros en la Backup Domain.
+
+    Habilitación del RTC y selección de la fuente de reloj
+    
+        Se activa RCC_BDCR_RTCEN en RCC->BDCR para habilitar el RTC.
+        Se activa RCC_BDCR_LSEON para encender el cristal LSE de 32.768 kHz.
+        Se espera a que el bit LSERDY indique que el oscilador está estable.
+        Se configura RCC_BDCR_RTCSEL_0 para seleccionar el LSE como la fuente de reloj del RTC.
+
+    Desbloqueo de protección de escritura
+        Se escribe 0xCA y 0x53 en RTC->WPR para poder modificar los registros del RTC.
+
+    Modo de inicialización
+        Se activa el bit INIT en RTC->ISR para habilitar la configuración.
+        Se espera a que el bit INITF se active, lo que indica que el RTC está listo para configuración.
+
+    Configuración del preescaler
+        Se configura RTC->PRER con RTC_PRER_PREDIV_A para ajustar la frecuencia del reloj asincrónico.
+        Se establece el preescaler en 0xFF, lo que contribuye a la división del reloj base.
+
+    Formato de hora y valores iniciales
+        Se limpia RTC->CR_FMT para usar el formato de 24 horas.
+        Se establecen valores iniciales en RTC->TR (hora) y RTC->DR (fecha) usando la conversión de decimal a BCD.
+
+    Salir del modo de inicialización
+        Se limpia el bit INIT en RTC->ISR para finalizar la configuración.
+        Se reactiva la protección de escritura con RTC->WPR = 0xFFU.
+
+Funciones de conversión entre Decimal y BCD
+
+    decToBCD(int val): Convierte un valor decimal a formato BCD.
+    BCDToDec(uint8_t val): Convierte un valor BCD a decimal.
+
+Funciones para modificar y leer el RTC
+
+Cada función sigue este patrón:
+
+    Escritura (setX)
+        Se limpian los bits correspondientes en RTC->TR o RTC->DR.
+        Se escribe el nuevo valor convertido a BCD en la posición correcta.
+
+    Lectura (getX)
+        Se lee el valor en BCD desde RTC->TR o RTC->DR.
+        Se convierte a decimal antes de retornarlo.
+
+Ejemplos:
+
+    setSegundos(int val): Escribe los segundos en RTC->TR.
+    getSegundos(void): Retorna los segundos actuales convertidos a decimal.
+
+Funciones para habilitar/deshabilitar cambios
+
+    enableRTCChange():
+        Desbloquea la protección de escritura.
+        Activa el bit INIT y espera a INITF.
+
+    disableRTCChange():
+        Sale del modo de inicialización desactivando INIT.
+        Reactiva la protección de escritura.
+        
+📌 Al escribir en el RTC, convertimos de Decimal → BCD.
+📌 Al leer del RTC, convertimos de BCD → Decimal.
+📌 INIT es el registro que es una bandera, que espera a que este en 1 para los cambios.       
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ENTER_MODE_4_BIT
+
+    Es un comando para poner la LCD en modo de 4 bits.
+    Generalmente tiene el valor 0x30 en el modo inicial, pero luego se usa 0x20 para configurar definitivamente el modo de 4 bits.
+
+LED_ENABLE
+
+    Activa la retroiluminación del LCD (si está controlada por software).
+    Suponiendo que se usa un PCF8574 (expansor de I/O por I2C), este bit probablemente enciende el LED trasero.
+
+EN_ENABLE
+
+    Activa la línea Enable (EN) de la LCD, lo que indica que el dato enviado es válido.
+    Se debe habilitar (EN = 1), esperar un tiempo, y luego deshabilitar (EN = 0) para que la LCD capture el dato.
+
+RW_SELECT_WRITE
+
+    Controla la línea R/W (Read/Write).
+    Si es 0, indica que se escribirá un comando o dato en la LCD.
+    Si fuera 1, se leería del LCD (pero en este driver no se usa lectura).
+
+RS_SELECT_ID
+
+    Controla la línea RS (Register Select).
+    Si es 0, indica que el byte enviado es un comando.
+    Si fuera 1, indicaría que es un dato (carácter a mostrar en la pantalla).
+    
+    
+    
+    
+    
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. ENTER_MODE_4_BIT → Configura la LCD en modo de 4 bits
+🔹 ¿Por qué se usa?
+
+El controlador HD44780 puede operar en modo de 8 bits o 4 bits.
+
+    En modo 8 bits, los datos se envían en un solo ciclo, usando los pines D0-D7 de la LCD.
+    En modo 4 bits, solo se usan D4-D7, y los datos deben enviarse en dos ciclos (parte alta y parte baja del byte).
+
+El modo de 4 bits se usa comúnmente porque reduce el número de pines requeridos, lo que es útil cuando se maneja la pantalla con I2C.
+🔹 ¿Cómo se configura?
+
+Para activar el modo 4 bits, se debe enviar el comando 0b0010xxxx (donde xxxx define parámetros adicionales).
+Este comando se envía dos veces seguidas al inicializar la LCD.
+2. LED_ENABLE → Activa la luz de fondo de la pantalla LCD
+🔹 ¿Por qué se usa?
+
+Algunas pantallas tienen un LED de retroiluminación que puede ser encendido o apagado mediante el bus I2C.
+🔹 ¿Cómo se configura?
+
+    Si LED_ENABLE = 1, la luz de fondo se enciende.
+    Si LED_ENABLE = 0, la luz de fondo se apaga.
+
+Generalmente, este bit no es parte del HD44780, sino que es agregado por el módulo I2C que adapta la pantalla.
+3. EN_ENABLE → Activa la señal Enable (EN) para permitir la escritura
+🔹 ¿Por qué se usa?
+
+El HD44780 solo lee los datos cuando la señal EN cambia de 1 a 0 (flanco de bajada). Esto significa que, antes de enviar datos o comandos:
+
+    Se pone EN = 1 para indicar que estamos listos para enviar.
+    Luego se pone EN = 0 para que la LCD procese la información.
+
+🔹 ¿Cómo se configura?
+
+    EN_ENABLE = 1: Activa el bit EN, indicando que un dato está listo para ser leído.
+    Después se debe enviar otro byte con EN = 0 para completar el ciclo de escritura.
+
+4. RW_SELECT_WRITE → Pone RW = 0 (modo escritura)
+🔹 ¿Por qué se usa?
+
+El pin RW (Read/Write) indica si queremos escribir o leer desde la LCD:
+
+    RW = 0 → Escritura (Write)
+    RW = 1 → Lectura (Read)
+
+En la mayoría de las aplicaciones, solo escribimos en la LCD, ya que leer el estado de la pantalla no es común.
+🔹 ¿Cómo se configura?
+
+Se coloca en 0 para indicar que queremos enviar un comando o un dato.
+5. RS_SELECT_ID → Configura el bit RS, que indica si se está enviando un comando o un dato
+🔹 ¿Por qué se usa?
+
+El HD44780 tiene dos tipos de información que puede recibir:
+
+    Comandos (RS = 0) → Configuran el funcionamiento de la LCD. Ejemplo:
+        Modo de 4 bits
+        Dirección del cursor
+        Borrar pantalla
+    Datos (RS = 1) → Representan caracteres a mostrar en la pantalla.
+
+🔹 ¿Cómo se configura?
+
+    RS = 0 → Se envía un comando a la LCD.
+    RS = 1 → Se envía un dato (un carácter ASCII).
+
+Ejemplo:
+Si queremos escribir la letra 'A' en la pantalla, debemos enviar:
+
+    Un byte con RS = 1 (indicando que es un dato).
+    Luego, el valor ASCII de 'A' (0x41).
+        
+
+
+Esa es una característica del modo de 4 bits del controlador HD44780. En este modo, los datos y comandos se envían en dos partes:
+
+    Los 4 bits más significativos (MSB) primero.
+    Los 4 bits menos significativos (LSB) después.
+
+¿Por qué se hace esto?
+
+El HD44780 originalmente funciona en modo de 8 bits, lo que significa que puede recibir un byte completo (8 bits) en una sola operación. Sin embargo, para reducir la cantidad de pines necesarios, se puede configurar en modo de 4 bits.
+
+Cuando está en modo de 4 bits, el HD44780 no tiene manera de recibir 8 bits de una vez, por lo que hay que enviar primero la parte alta y luego la parte baja del byte.
+¿Cómo sabe la LCD que se están enviando dos partes?
+
+Cada vez que se envía 4 bits, se debe generar un pulso en la señal Enable (EN).
+
+    El primer pulso de Enable indica que se están enviando los primeros 4 bits (parte alta).
+    El segundo pulso de Enable indica que se están enviando los últimos 4 bits (parte baja).
+
+--------------------WRITE SINGLE
+
+    ptrHandlerI2C → Puntero a una estructura que contiene la configuración del periférico I2C, incluyendo la dirección del esclavo.
+    newValue → El byte que queremos enviar al esclavo (en este caso, la LCD).
+
+2. Inicio de la Transacción I2C
+
+i2c_StartTransaction(ptrHandlerI2C);
+
+    Genera una condición de START en el bus I2C.
+    Es la señal inicial para que todos los dispositivos en el bus estén atentos.
+
+3. Envío de la dirección del esclavo
+
+i2c_SendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, eI2C_WRITE_DATA);
+
+    Se envía la dirección del esclavo (ptrHandlerI2C->slaveAddress).
+    eI2C_WRITE_DATA indica que vamos a escribir (R/W = 0).
+    El esclavo responde con un ACK (si está presente y activo).
+
+4. Envío del byte de datos
+
+i2c_SendDataByte(ptrHandlerI2C, newValue);
+
+    Manda el byte newValue al esclavo.
+    En el caso de la LCD, este byte representa un comando o un dato, dependiendo de cómo se haya construido (RS, RW, EN, etc.).
+    La LCD (o cualquier esclavo) debería responder con un ACK si recibió correctamente el dato.
+
+5. Finalización de la Transacción I2C
+
+i2c_StopTransaction(ptrHandlerI2C);
+
+    Se genera una condición de STOP para liberar el bus.
+    Indica que la transmisión ha finalizado y que otros dispositivos pueden usar el bus.
+    
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+📌 1. configPLL(uint16_t freqPLL)
+
+Esta función configura el PLL para generar la frecuencia deseada.
+🔹 Selección de la Fuente del PLL
+
+RCC -> PLLCFGR &= ~(RCC_PLLCFGR_PLLSRC);
+
+    Se selecciona el HSI (reloj interno de 16 MHz) como fuente del PLL limpiando el bit PLLSRC en RCC->PLLCFGR.
+
+🔹 Divisor de Entrada (PLLM)
+
+RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM);
+RCC->PLLCFGR |= (RCC_PLLCFGR_PLLM_3); // Ponemos un 8 en el PLLM
+
+    PLLM divide la frecuencia de entrada (16 MHz del HSI).
+    Aquí se coloca en 8, resultando en una entrada al PLL de 16 MHz / 8 = 2 MHz.
+
+🔹 Multiplicador del PLL (PLLN)
+
+RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLN);
+RCC->PLLCFGR |= (RCC_PLLCFGR_PLLN_2);
+RCC->PLLCFGR |= (RCC_PLLCFGR_PLLN_5);
+RCC->PLLCFGR |= (RCC_PLLCFGR_PLLN_6);
+
+    PLLN multiplica la señal de 2 MHz para generar una mayor frecuencia.
+    En este caso, se configura para 80, lo que daría 2 MHz × 80 = 160 MHz.
+
+🔹 Verificación de la Frecuencia Deseada
+
+if(freqPLL <= 100 && 50 < freqPLL)
+    RCC->PLLCFGR |= (freqPLL << RCC_PLLCFGR_PLLN_Pos);
+else
+    RCC->PLLCFGR |= (PLL_STANDARD_FREQ << RCC_PLLCFGR_PLLN_Pos);
+
+    Si la frecuencia solicitada está entre 50 y 100 MHz, se configura PLLN con ese valor.
+    Si está fuera de rango, se usa la frecuencia estándar (80 MHz).
+
+🔹 Divisor de Salida (PLLP)
+
+RCC->PLLCFGR &= ~(0b11 << RCC_PLLCFGR_PLLP_Pos); // Salida DIV2
+
+    PLLP divide la salida del PLL. Aquí se configura en DIV2, lo que resulta en 160 MHz / 2 = 80 MHz.
+
+🔹 Ajuste del Regulador de Voltaje
+
+if(freqPLL <= 64)
+    PWR->CR |= (0x1 << PWR_CR_VOS_Pos);
+else if(freqPLL <= 84)
+    PWR->CR |= (0x2 << PWR_CR_VOS_Pos);
+else if(freqPLL <= 100)
+    PWR->CR |= (0x3 << PWR_CR_VOS_Pos);
+
+    Se ajusta el regulador de voltaje (VOS) según la frecuencia del PLL para garantizar estabilidad.
+
+🔹 Activación del PLL
+
+RCC->CR |= RCC_CR_PLLON;
+while (!(RCC->CR & RCC_CR_PLLRDY)) {
+    __NOP();
+}
+
+    Se enciende el PLL y se espera a que se estabilice (PLL Ready).
+
+🔹 Configuración de Preescalers para los Buses
+
+RCC->CFGR &= ~(0xF << RCC_CFGR_HPRE_Pos);  // No hay preescaler para AHB
+RCC->CFGR &= ~(0x7 << RCC_CFGR_PPRE2_Pos); // No hay preescaler para APB2
+RCC->CFGR &= ~(0x7 << RCC_CFGR_PPRE1_Pos);
+RCC->CFGR |= (0x4 << RCC_CFGR_PPRE1_Pos);  // Preescaler 2:1 para APB1
+
+    AHB y APB2 sin preescaler.
+    APB1 con DIV2 ya que no puede superar 50 MHz.
+
+🔹 Configuración de la Flash
+
+FLASH->ACR &= ~(0xF << FLASH_ACR_LATENCY_Pos);
+if(50 <= freqPLL && freqPLL <= 64)
+    FLASH -> ACR |= (0x1 << FLASH_ACR_LATENCY_Pos); // 1 WS
+else if(90 <= freqPLL && freqPLL <= 100)
+    FLASH -> ACR |= (0x3 << FLASH_ACR_LATENCY_Pos); // 3 WS
+else
+    FLASH -> ACR |= (0x2 << FLASH_ACR_LATENCY_Pos); // 2 WS
+
+    Se configuran los ciclos de espera (Wait States) en la memoria Flash.
+
+🔹 Cambio de Fuente de Reloj
+
+RCC->CFGR &= ~RCC_CFGR_SW_1;
+RCC->CFGR |= RCC_CFGR_SW_1;  // Se usa el PLL como reloj principal
+
+    Se cambia el System Clock para que use el PLL.
+        
+        
+        
+        

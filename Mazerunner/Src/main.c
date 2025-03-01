@@ -51,6 +51,8 @@ uint16_t siete_segmentos = 0;	//variable para almacenar el valor del 7segmentos
 uint8_t caso_transistor = 0;	//variable para hacer switcheo de los transistores, el de unidades por decena y viceversa
 uint8_t unidades = 0;			//variable para almacenar el dato de la unidad
 uint8_t decenas = 0;			//variable para almacenar el dato de la decena
+uint8_t centenas = 0;			//variable para almacenar el dato de la decena
+uint8_t millares = 0;			//variable para almacenar el dato de la decena
 uint8_t flag_adc = 0;			//bandera para el usart
 uint8_t contador = 0;			//variable para contar
 uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
@@ -87,6 +89,8 @@ GPIO_Handler_t pinX = {0}; //	PinA0
 GPIO_Handler_t pinY = {0}; //	PinA0
 GPIO_Handler_t switcheoUnidades = {0};
 GPIO_Handler_t switcheoDecenas = {0};
+GPIO_Handler_t switcheoCentenas= {0};  // PinC8
+GPIO_Handler_t switcheoMillares= {0};  // PinC5
 
 //Handlers ADC
 ADC_Config_t joystick = {0};  //		Channel0: PinA0
@@ -133,11 +137,11 @@ void switcheo_transistor (uint8_t choose);		//funcion para encender los transist
 void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
 void refresh (void);							//funcion para el constante refresco de el display
 void reducir_tiempo(void);						//funcion para contar hacia atras cada 1 seg
-void drawPixel (I2C_Handler_t *ptrHandlerI2C, uint8_t x, uint8_t y);
 void animateRandomSquares(I2C_Handler_t *ptrHandlerI2Ctr);
 void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
+void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
 void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr);
 
@@ -154,7 +158,7 @@ int main(void)
 	//clearScreen(&oled);
 	//systick_Delay_ms(1000);
 
-	drawMaze(&oled);
+//	drawLineOnPage6(&oled);
 
 //	for(int i = 0 ; i<64 ; i++){
 //
@@ -181,6 +185,8 @@ int main(void)
 
 
 
+
+
 	void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
 
 
@@ -199,8 +205,8 @@ void init_system(void){
 	/*	Configuramos los pines*/
 
 	/*	LedBlinky	*/
-	userLed.pGPIOx 							= 	GPIOA;
-	userLed.pinConfig.GPIO_PinNumber		=	PIN_5;
+	userLed.pGPIOx 							= 	GPIOH;
+	userLed.pinConfig.GPIO_PinNumber		=	PIN_1;
 	userLed.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	userLed.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	userLed.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -212,8 +218,8 @@ void init_system(void){
 	gpio_WritePin(&userLed, SET);
 
 	/*	PinX	*/
-	pinX.pGPIOx 						= 	GPIOC;
-	pinX.pinConfig.GPIO_PinNumber		=	PIN_8;
+	pinX.pGPIOx 						= 	GPIOB;
+	pinX.pinConfig.GPIO_PinNumber		=	PIN_5;
 	pinX.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinX.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	pinX.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -226,7 +232,7 @@ void init_system(void){
 
 	/*	PinY	*/
 	pinY.pGPIOx 						= 	GPIOC;
-	pinY.pinConfig.GPIO_PinNumber		=	PIN_5;
+	pinY.pinConfig.GPIO_PinNumber		=	PIN_4;
 	pinY.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
 	pinY.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
 	pinY.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_MEDIUM;
@@ -352,6 +358,25 @@ void init_system(void){
 	switcheoDecenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
 	switcheoDecenas.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
 
+	/*	switcheoCentenas */
+	switcheoCentenas.pGPIOx 						= 	GPIOC;
+	switcheoCentenas.pinConfig.GPIO_PinNumber		=	PIN_8;
+	switcheoCentenas.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	switcheoCentenas.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	switcheoCentenas.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	switcheoCentenas.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&switcheoCentenas);
+
+	/*	switcheoMillares */
+	switcheoMillares.pGPIOx 						= 	GPIOC;
+	switcheoMillares.pinConfig.GPIO_PinNumber		=	PIN_5;
+	switcheoMillares.pinConfig.GPIO_PinMode			=	GPIO_MODE_OUT;
+	switcheoMillares.pinConfig.GPIO_PinOutputType	=	GPIO_OTYPE_PUSHPULL;
+	switcheoMillares.pinConfig.GPIO_PinOutputSpeed	=	GPIO_OSPEED_FAST;
+	switcheoMillares.pinConfig.GPIO_PinPuPdControl	=	GPIO_PUPDR_NOTHING;
+
+	gpio_Config(&switcheoMillares);
 
 
 
@@ -459,8 +484,8 @@ void init_system(void){
 
 	usart_WriteChar(&commSerial, '\0');
 
-	pinScl.pGPIOx = GPIOB;
-	pinScl.pinConfig.GPIO_PinNumber 			= PIN_10;
+	pinScl.pGPIOx = GPIOA;
+	pinScl.pinConfig.GPIO_PinNumber 			= PIN_8;
 	pinScl.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinScl.pinConfig.GPIO_PinOutputSpeed		= GPIO_OSPEED_MEDIUM;
 	pinScl.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -470,7 +495,7 @@ void init_system(void){
 	gpio_Config(&pinScl);
 
 	pinSda.pGPIOx = GPIOB;
-	pinSda.pinConfig.GPIO_PinNumber 			= PIN_3;
+	pinSda.pinConfig.GPIO_PinNumber 			= PIN_8;
 	pinSda.pinConfig.GPIO_PinMode 				= GPIO_MODE_ALTFN;
 	pinSda.pinConfig.GPIO_PinOutputSpeed 		= GPIO_OSPEED_MEDIUM;
 	pinSda.pinConfig.GPIO_PinOutputType 		= GPIO_OTYPE_OPENDRAIN;
@@ -479,7 +504,7 @@ void init_system(void){
 
 	gpio_Config(&pinSda);
 
-	oled.pI2Cx = I2C2;
+	oled.pI2Cx = I2C3;
 	oled.i2c_mode = I2C_MODE_SM_SPEED;
 	oled.i2c_mainClock = I2C_MAIN_CLOCK_16_Mhz;
 	oled.slaveAddress = 0x3C;
@@ -613,15 +638,35 @@ void display_numbers (uint8_t valor){
 void switcheo_transistor (uint8_t choose){
 	switch(choose){
 	case 0:{
+		gpio_WritePin(&switcheoCentenas,0);
 		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoMillares,0);
 		display_numbers(unidades);
 		gpio_WritePin(&switcheoUnidades,1);
 		break;
 		}
 	case 1:{
+		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoMillares,0);
 		gpio_WritePin(&switcheoUnidades,0);
 		display_numbers(decenas);
 		gpio_WritePin(&switcheoDecenas,1);
+		break;
+		}
+	case 2:{
+		gpio_WritePin(&switcheoUnidades,0);
+		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoMillares,0);
+		display_numbers(centenas);
+		gpio_WritePin(&switcheoCentenas,1);
+		break;
+		}
+	case 3:{
+		gpio_WritePin(&switcheoCentenas,0);
+		gpio_WritePin(&switcheoDecenas,0);
+		gpio_WritePin(&switcheoUnidades,0);
+		display_numbers(millares);
+		gpio_WritePin(&switcheoMillares,1);
 		break;
 		}
 	}
@@ -632,21 +677,26 @@ void switcheo_transistor (uint8_t choose){
 void separador_numero (uint16_t valor){
 
 	uint16_t numero = 0;
-	// supongamos que numero es igual 34
+	// supngamos que numero es igual 1234
 	numero = valor;
 	// residuo 4,
 	unidades = numero % 10;
-	// cociente 3
+	// cociente 123
 	numero = numero/10;
 	// residuo 3
 	decenas = numero % 10;
 	// cociente 12
 	numero = numero/10;
-
+	// residuo 2
+	centenas = numero % 10;
+	// cociente 1
+	numero = numero/10;
+	millares =numero%10;
 
 
 
 }
+
 
 void refresh (void){
 	separador_numero(siete_segmentos);
@@ -680,6 +730,9 @@ void reducir_tiempo(void){
 
 void lecturaXY(void){
 
+	clearPixel2(&oled, posX, posY);
+
+
 	adc_StartSingleConv();
 	systick_Delay_ms(10);
 	valX = adc_GetValue();
@@ -701,6 +754,11 @@ void lecturaXY(void){
 	gpio_WritePin(&pinY, 0);
 	systick_Delay_ms(5);
 
+	procesar_coordenadas();
+
+	drawPixel2(&oled, posX, posY);
+
+
 	flag_adc = 0;
 
 
@@ -712,45 +770,38 @@ void lecturaXY(void){
 
 void procesar_coordenadas(void){
 
-	if(valX > 3040 && valX < 4095){
-
-		posX = posX +1;
+	if(valX > 3500 && valX < 3900){
+		if(posX <= 63){
+			posX = posX +1;
+		}
 	}
 
 
-	if(valY > 3040 && valY < 4095){
-
+	if(valY > 3500 && valY < 3900){
+		if(posY <= 127){
 			posY = posY +1;
 		}
 
-	if(valX > 0 && valX < 1040){
+	}
 
+	if(valX > 0 && valX < 2500){
+		if(posX >= 1){
 			posX = posX -1;
 		}
 
-	if(valY > 0 && valY < 1040){
+	}
 
-				posY = posY -1;
-			}
+	if(valY > 0 && valY < 2500){
+		if(posY >= 1){
+			posY = posY -1;
+		}
+
+	}
 }
 
-void drawPixel (I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y){
-	uint8_t page = y/8;
-	uint8_t bit_position = y%8;
-	uint8_t pixelData = 1 << bit_position;
 
-	char dataToSend = (char) pixelData;
-
-	setPage(ptrHandlerI2Ctr, page);
-	setColumnAddress(ptrHandlerI2Ctr, x);
-
-	sendDataBytes(ptrHandlerI2Ctr, &dataToSend, 1);
-}
 
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
-	//char coord[8][128] = {0}; // 8 páginas (filas), 128 columnas
-
-
 
 	if(x >= 1 && x <= 8){
 		uint8_t auxpage1 = coord[0][y] |= (1 << transformX(x));
@@ -791,6 +842,52 @@ void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
 	        setColumnAddress(ptrHandlerI2Ctr, 0);
 	        sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
 	    }
+}
+
+void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
+    if(x >= 1 && x <= 8){
+        uint8_t auxpage1 = coord[0][y] &= ~(1 << transformX(x));
+        coord[0][y] = auxpage1;
+    }
+    if(x > 8 && x <= 16){
+        uint8_t auxpage1 = coord[1][y] &= ~(1 << transformX(x));
+        coord[1][y] = auxpage1;
+    }
+    if(x > 16 && x <= 24){
+        uint8_t auxpage1 = coord[2][y] &= ~(1 << transformX(x));
+        coord[2][y] = auxpage1;
+    }
+    if(x > 24 && x <= 32){
+        uint8_t auxpage1 = coord[3][y] &= ~(1 << transformX(x));
+        coord[3][y] = auxpage1;
+    }
+    if(x > 32 && x <= 40){
+        uint8_t auxpage1 = coord[4][y] &= ~(1 << transformX(x));
+        coord[4][y] = auxpage1;
+    }
+    if(x > 40 && x <= 48){
+        uint8_t auxpage1 = coord[5][y] &= ~(1 << transformX(x));
+        coord[5][y] = auxpage1;
+    }
+    if(x > 48 && x <= 56){
+        uint8_t auxpage1 = coord[6][y] &= ~(1 << transformX(x));
+        coord[6][y] = auxpage1;
+    }
+    if(x > 56 && x <= 64){
+        uint8_t auxpage1 = coord[7][y] &= ~(1 << transformX(x));
+        coord[7][y] = auxpage1;
+    }
+
+    // coordenadas
+    for (int page = 0; page < 8; page++) {
+        setPage(ptrHandlerI2Ctr, page);
+        setColumnAddress(ptrHandlerI2Ctr, 0);
+        sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
+    }
+}
+
+void DrawPJ(void){
+
 }
 
 uint8_t transformX(uint8_t x){
@@ -840,32 +937,35 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
 	char maze[8][128] = {0}; // 8 páginas (filas), 128 columnas
 
-	// Definir un laberinto estático (1 = pared, 0 = camino)
-	// Cada byte representa 8 píxeles en una columna
-	for (int col = 0; col < 128; col++) {
-	    if (col % 16 == 0 || col % 16 == 15) { // Paredes verticales
-	        for (int page = 0; page < 8; page++) {
-	            maze[page][col] = 0xFF;
-	        }
-	    } else {
-	        for (int page = 0; page < 8; page++) {
-	            maze[page][col] = 0x00; // Limpia el resto del laberinto
-	        }
-	    }
-	}
-
-	// Agregar paredes horizontales con aberturas
-	for (int page = 2; page < 8; page += 2) { // Controla la separación de las paredes
+	    // Crear paredes verticales cada 16 píxeles
 	    for (int col = 0; col < 128; col++) {
-	        if (col % 32 < 24) { // Controla los huecos horizontales
-	            maze[page][col] = 0xF0; // Usa solo la mitad superior de la celda
+	        if (col % 16 == 0 || col % 16 == 15) {
+	            for (int page = 0; page < 8; page++) {
+	                maze[page][col] = 0xFF; // Paredes verticales
+	            }
 	        }
 	    }
-	}
 
-	    // Crear pasadizos
-	    maze[1][0] = 0x00; // Entrada
-	    maze[6][127] = 0x00; // Salida
+	    // Crear paredes horizontales para formar pasillos
+	    for (int page = 1; page < 8; page += 2) {
+	        for (int col = 0; col < 128; col++) {
+	            if (col % 16 != 0 && col % 16 != 15) {
+	                maze[page][col] = 0xFF; // Pared horizontal
+	            }
+	        }
+	    }
+
+	    // Crear un camino claro dentro del laberinto
+	    for (int col = 8; col < 120; col += 16) {
+	        maze[0][col] = 0x00; // Abrir pasillo en la parte superior
+	        maze[2][col + 8] = 0x00; // Abrir pasillo en la segunda página
+	        maze[4][col] = 0x00; // Abrir pasillo en la cuarta página
+	        maze[6][col + 8] = 0x00; // Abrir pasillo en la sexta página
+	    }
+
+	    // Definir entrada y salida
+	    maze[1][0] = 0x00; // Entrada más clara
+	    maze[6][127] = 0x00; // Salida más clara
 
 	    // Dibujar el laberinto en la OLED
 	    for (int page = 0; page < 8; page++) {
@@ -873,7 +973,8 @@ void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
 	        setColumnAddress(ptrHandlerI2Ctr, 0);
 	        sendDataBytes(ptrHandlerI2Ctr, maze[page], 128);
 	    }
-}
+	}
+
 
 
 void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr) {
