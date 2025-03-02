@@ -143,7 +143,7 @@ void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
-void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr);
+void drawMaze(void);
 
 int main(void)
 {
@@ -152,8 +152,10 @@ int main(void)
 	clearDisplay(&oled);
 	configMagic();								//Configuracion del Magic
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
+
+	drawMaze();
 	//drawLineOnPage6(&oled);
-	systick_Delay_ms(1000);
+//	drawLineOnPage6(&oled);
 
 	//clearScreen(&oled);
 	//systick_Delay_ms(1000);
@@ -700,21 +702,30 @@ void separador_numero (uint16_t valor){
 
 void refresh (void){
 	separador_numero(siete_segmentos);
-		switch(caso_transistor){
-			case 0:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor ++;
-				break;
-			}
-			case 1:{
-				switcheo_transistor(caso_transistor);
-				caso_transistor ++;
-				break;
-			}
+			switch(caso_transistor){
+				case 0:{
+					switcheo_transistor(caso_transistor);
+					caso_transistor ++;
+					break;
+				}
+				case 1:{
+					switcheo_transistor(caso_transistor);
+					caso_transistor ++;
+					break;
+				}
+				case 2:{
+					switcheo_transistor(caso_transistor);
+					caso_transistor ++;
+					break;
+				}
+				case 3:{
+					switcheo_transistor(caso_transistor);
+					caso_transistor = 0;
+					break;
+				}
 
-
-		}
-}
+			}
+	}
 
 void reducir_tiempo(void){
 	contador --;
@@ -778,8 +789,8 @@ void procesar_coordenadas(void){
 
 
 	if(valY > 3500 && valY < 3900){
-		if(posY <= 127){
-			posY = posY +1;
+		if(posY >= 1){
+			posY = posY -1;
 		}
 
 	}
@@ -792,8 +803,8 @@ void procesar_coordenadas(void){
 	}
 
 	if(valY > 0 && valY < 2500){
-		if(posY >= 1){
-			posY = posY -1;
+		if(posY <= 127){
+			posY = posY +1;
 		}
 
 	}
@@ -886,7 +897,7 @@ void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
     }
 }
 
-void DrawPJ(void){
+void Draw(void){
 
 }
 
@@ -935,89 +946,223 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 
 
 void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
-	char maze[8][128] = {0}; // 8 páginas (filas), 128 columnas
+	char coord[8][128] = {0}; // 8 paginas (filas), 128 columnas
 
-	    // Crear paredes verticales cada 16 píxeles
-	    for (int col = 0; col < 128; col++) {
-	        if (col % 16 == 0 || col % 16 == 15) {
-	            for (int page = 0; page < 8; page++) {
-	                maze[page][col] = 0xFF; // Paredes verticales
-	            }
-	        }
-	    }
+		// Definir un laberinto estatico (1 = pared, 0 = camino)
+		// Cada byte representa 8 pixeles en una columna
+		for (int col = 0; col < 128; col++) {
+		    if (col % 16 == 0 || col % 16 == 15) {
+		        for (int page = 0; page < 8; page++) {
+		            coord[page][col] = 0xFF; // Paredes verticales
+		        }
+		    }
+		}
 
-	    // Crear paredes horizontales para formar pasillos
-	    for (int page = 1; page < 8; page += 2) {
-	        for (int col = 0; col < 128; col++) {
-	            if (col % 16 != 0 && col % 16 != 15) {
-	                maze[page][col] = 0xFF; // Pared horizontal
-	            }
-	        }
-	    }
+		// Crear pasadizos
+		coord[1][0] = 0x00;   // Entrada
+		coord[6][127] = 0x00; // Salida
 
-	    // Crear un camino claro dentro del laberinto
-	    for (int col = 8; col < 120; col += 16) {
-	        maze[0][col] = 0x00; // Abrir pasillo en la parte superior
-	        maze[2][col + 8] = 0x00; // Abrir pasillo en la segunda página
-	        maze[4][col] = 0x00; // Abrir pasillo en la cuarta página
-	        maze[6][col + 8] = 0x00; // Abrir pasillo en la sexta página
-	    }
-
-	    // Definir entrada y salida
-	    maze[1][0] = 0x00; // Entrada más clara
-	    maze[6][127] = 0x00; // Salida más clara
-
-	    // Dibujar el laberinto en la OLED
-	    for (int page = 0; page < 8; page++) {
-	        setPage(ptrHandlerI2Ctr, page);
-	        setColumnAddress(ptrHandlerI2Ctr, 0);
-	        sendDataBytes(ptrHandlerI2Ctr, maze[page], 128);
-	    }
+		// Dibujar el laberinto en la OLED
+		for (int page = 0; page < 8; page++) {
+		    setPage(ptrHandlerI2Ctr, page);
+		    setColumnAddress(ptrHandlerI2Ctr, 0);
+		    sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
+		}
 	}
 
 
 
-void drawMaze(I2C_Handler_t *ptrHandlerI2Ctr) {
-    // Recorrer la matriz del laberinto y dibujar las paredes
-    for (int y = 0; y < 64; y++) { // Recorrer las filas
-        for (int x = 0; x < 128; x++) { // Recorrer las columnas
-            if (maze_matrix[y][x] == 1) { // Si el píxel es una pared (negro)
-                // Transformar las coordenadas y dibujar el píxel en la matriz global coord
-                if (x >= 1 && x <= 8) {
-                    coord[0][y] |= (1 << transformX(x));
-                }
-                if (x > 8 && x <= 16) {
-                    coord[1][y] |= (1 << transformX(x));
-                }
-                if (x > 16 && x <= 24) {
-                    coord[2][y] |= (1 << transformX(x));
-                }
-                if (x > 24 && x <= 32) {
-                    coord[3][y] |= (1 << transformX(x));
-                }
-                if (x > 32 && x <= 40) {
-                    coord[4][y] |= (1 << transformX(x));
-                }
-                if (x > 40 && x <= 48) {
-                    coord[5][y] |= (1 << transformX(x));
-                }
-                if (x > 48 && x <= 56) {
-                    coord[6][y] |= (1 << transformX(x));
-                }
-                if (x > 56 && x <= 64) {
-                    coord[7][y] |= (1 << transformX(x));
-                }
-            }
-        }
-    }
+void drawMaze(void){
 
-    // Dibujar el laberinto en la pantalla OLED
-    for (int page = 0; page < 8; page++) {
-        setPage(ptrHandlerI2Ctr, page);
-        setColumnAddress(ptrHandlerI2Ctr, 0);
-        sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
-    }
+	//Bordes
+	for(int i = 10 ; i<128 ; i++){
+		drawPixel2(&oled,1,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 1 ; i<64 ; i++){
+		drawPixel2(&oled,i,127);
+		systick_Delay_ms(2);
+	}
+	for(int i = 118 ; i>0 ; i--){
+		drawPixel2(&oled,64,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 64 ; i>0 ; i--){
+		drawPixel2(&oled,i,0);
+		systick_Delay_ms(2);
+	}
+
+	//Horizontales
+	//X10
+	for(int i = 10 ; i<30 ; i++){
+		drawPixel2(&oled,10,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 70 ; i<80 ; i++){
+		drawPixel2(&oled,10,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 100 ; i<120 ; i++){
+		drawPixel2(&oled,10,i);
+		systick_Delay_ms(2);
+	}
+	//X20
+	for(int i = 30 ; i<40 ; i++){
+		drawPixel2(&oled,20,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 50 ; i<70 ; i++){
+		drawPixel2(&oled,20,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 80 ; i<90 ; i++){
+		drawPixel2(&oled,20,i);
+		systick_Delay_ms(2);
+	}
+
+	//X30
+	for(int i = 0 ; i<20 ; i++){
+		drawPixel2(&oled,30,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 30 ; i<40 ; i++){
+		drawPixel2(&oled,30,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 80 ; i<90 ; i++){
+		drawPixel2(&oled,30,i);
+		systick_Delay_ms(2);
+	}
+
+	//X40
+	for(int i = 10 ; i<20 ; i++){
+		drawPixel2(&oled,40,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 50 ; i<60 ; i++){
+		drawPixel2(&oled,40,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 100 ; i<110 ; i++){
+		drawPixel2(&oled,40,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 120 ; i<127 ; i++){
+		drawPixel2(&oled,40,i);
+		systick_Delay_ms(2);
+	}
+
+	//X52
+	for(int i = 0 ; i<20 ; i++){
+		drawPixel2(&oled,52,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 30 ; i<40 ; i++){
+		drawPixel2(&oled,52,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 60 ; i<70 ; i++){
+		drawPixel2(&oled,52,i);
+		systick_Delay_ms(2);
+	}
+	for(int i = 110 ; i<120 ; i++){
+		drawPixel2(&oled,52,i);
+		systick_Delay_ms(2);
+	}
+
+	//Verticales
+	//Y10
+	for(int i = 10 ; i<20 ; i++){
+		drawPixel2(&oled,i,10);
+		systick_Delay_ms(2);
+	}
+
+	//Y20
+	for(int i = 10 ; i<40 ; i++){
+		drawPixel2(&oled,i,20);
+		systick_Delay_ms(2);
+	}
+
+	//Y30
+	for(int i = 40 ; i<52 ; i++){
+		drawPixel2(&oled,i,30);
+		systick_Delay_ms(2);
+	}
+
+	//Y40
+	for(int i = 0 ; i<20 ; i++){
+		drawPixel2(&oled,i,40);
+		systick_Delay_ms(2);
+	}
+	for(int i = 30 ; i<40 ; i++){
+		drawPixel2(&oled,i,40);
+		systick_Delay_ms(2);
+	}
+
+	//Y50
+	for(int i = 0 ; i<10 ; i++){
+		drawPixel2(&oled,i,50);
+		systick_Delay_ms(2);
+	}
+	for(int i = 30 ; i<64 ; i++){
+		drawPixel2(&oled,i,50);
+		systick_Delay_ms(2);
+	}
+
+	//Y60
+	for(int i = 0 ; i<30 ; i++){
+		drawPixel2(&oled,i,60);
+		systick_Delay_ms(2);
+	}
+
+	//Y70
+	for(int i = 20 ; i<52 ; i++){
+		drawPixel2(&oled,i,70);
+		systick_Delay_ms(2);
+	}
+
+	//Y80
+	for(int i = 40 ; i<64 ; i++){
+		drawPixel2(&oled,i,80);
+		systick_Delay_ms(2);
+	}
+
+	//Y90
+	for(int i = 0 ; i<20 ; i++){
+		drawPixel2(&oled,i,90);
+		systick_Delay_ms(2);
+	}
+	for(int i = 30 ; i<64 ; i++){
+		drawPixel2(&oled,i,90);
+		systick_Delay_ms(2);
+	}
+
+	//Y100
+	for(int i = 10 ; i<30 ; i++){
+		drawPixel2(&oled,i,100);
+		systick_Delay_ms(2);
+	}
+	for(int i = 40 ; i<64 ; i++){
+		drawPixel2(&oled,i,100);
+		systick_Delay_ms(2);
+	}
+
+	//Y110
+	for(int i = 10 ; i<40 ; i++){
+		drawPixel2(&oled,i,110);
+		systick_Delay_ms(2);
+	}
+
+	//Y120
+	for(int i = 20 ; i<52 ; i++){
+		drawPixel2(&oled,i,120);
+		systick_Delay_ms(2);
+	}
+
+
+
 }
+
 
 // apagar, configurar nuevamente, cambiar el canal. Pin de entrada
 
