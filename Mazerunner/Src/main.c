@@ -59,8 +59,8 @@ uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
 uint16_t valX = 0;				//valor adc del pinX
 uint16_t valY = 0;				//valor adc del pinY
 uint16_t adc_data = 0;			//data del adc
-int8_t posX = 0;				//posicion en X pantalla
-int8_t posY = 0;				//posicion en Y pantalla
+int8_t posX = 3;				//posicion en X pantalla
+int8_t posY = 3;				//posicion en Y pantalla
 
 
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
@@ -143,6 +143,7 @@ void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
+uint8_t ReadCoord(uint8_t x, uint8_t y);
 void drawMaze(void);
 
 int main(void)
@@ -783,28 +784,36 @@ void procesar_coordenadas(void){
 
 	if(valX > 3500 && valX < 3900){
 		if(posX <= 63){
-			posX = posX +1;
+			if(ReadCoord(posX+1, posY) == 0){
+				posX = posX +1;
+			}
 		}
 	}
 
 
 	if(valY > 3500 && valY < 3900){
 		if(posY >= 1){
-			posY = posY -1;
+			if(ReadCoord(posX, posY-1) == 0){
+				posY = posY -1;
+			}
 		}
 
 	}
 
 	if(valX > 0 && valX < 2500){
 		if(posX >= 1){
-			posX = posX -1;
+			if(ReadCoord(posX-2, posY) == 0){
+				posX = posX -1;
+			}
 		}
 
 	}
 
 	if(valY > 0 && valY < 2500){
 		if(posY <= 127){
-			posY = posY +1;
+			if(ReadCoord(posX, posY+1) == 0){
+				posY = posY +1;
+			}
 		}
 
 	}
@@ -897,7 +906,16 @@ void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
     }
 }
 
-void Draw(void){
+uint8_t ReadCoord(uint8_t x, uint8_t y){
+
+	uint8_t page = x/8;
+
+	uint8_t bit_position = x%8;
+
+	uint8_t byte = coord[page][y];
+	uint8_t bit_value = (byte >> bit_position) & 1;
+
+	return bit_value;
 
 }
 
