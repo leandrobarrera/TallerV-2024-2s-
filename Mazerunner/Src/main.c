@@ -1154,8 +1154,11 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 	case STATE_MENSAJE:{
 
-		printf("\n");
-		printf("ms: %d\n", contador);
+		printf("   ░█▀▀▀░█▀▀▀░░█▀▀░▀▀█░░█░░░░ \n");
+		printf("░░░░█░▀█░█░▀█░░█▀▀░▄▀░░░▀░░░░\n");
+		printf("░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░\n");
+
+
 
 
 		fsm_program.state = STATE_IDLE;
@@ -1221,6 +1224,7 @@ FSM_STATES fsm_function(uint8_t evento){
 void Timer2_Callback(void){
 
 	flag_conteo = 1;
+	fsm_program.state = STATE_MENSAJE;
 }
 
 void Timer3_Callback(void){
@@ -1235,6 +1239,7 @@ void Timer3_Callback(void){
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
 	flag_adc = 1;
+
 
 }
 
