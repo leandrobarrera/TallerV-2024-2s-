@@ -9,4 +9,4 @@
 ../Src/oled_driver.c:160:6:toggleDisplay	1
 ../Src/oled_driver.c:170:7:letterTochar	59
 ../Src/oled_driver.c:695:6:drawMSG	28
-../Src/oled_driver.c:820:6:drawSinglePageMSG	10
+../Src/oled_driver.c:818:6:drawSinglePageMSG	10

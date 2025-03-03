@@ -54,15 +54,15 @@ uint8_t decenas = 0;			//variable para almacenar el dato de la decena
 uint8_t centenas = 0;			//variable para almacenar el dato de la decena
 uint8_t millares = 0;			//variable para almacenar el dato de la decena
 uint8_t flag_adc = 0;			//bandera para el usart
-uint8_t contador = 0;			//variable para contar
+//uint16_t contador = 0;			//variable para contar
 uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
 uint16_t valX = 0;				//valor adc del pinX
 uint16_t valY = 0;				//valor adc del pinY
 uint16_t adc_data = 0;			//data del adc
 int8_t posX = 3;				//posicion en X pantalla
 int8_t posY = 3;				//posicion en Y pantalla
-
-
+uint8_t flag_conteo = 0;
+volatile int contador = 6000;
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
 
 //variables para USART6
@@ -154,35 +154,9 @@ int main(void)
 	configMagic();								//Configuracion del Magic
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
 
+
 	drawMaze();
-	//drawLineOnPage6(&oled);
-//	drawLineOnPage6(&oled);
 
-	//clearScreen(&oled);
-	//systick_Delay_ms(1000);
-
-//	drawLineOnPage6(&oled);
-
-//	for(int i = 0 ; i<64 ; i++){
-//
-//		drawPixel2(&oled,i,64);
-//		systick_Delay_ms(10);
-//	}
-//	for(int i = 0 ; i<64 ; i++){
-//
-//		drawPixel2(&oled,i,66);
-//		systick_Delay_ms(10);
-//	}
-//	for(int i = 0 ; i<128 ; i++){
-//
-//		drawPixel2(&oled,32,i);
-//		systick_Delay_ms(10);
-//	}
-//	for(int i = 0 ; i<64 ; i++){
-//
-//		drawPixel2(&oled,i,66);
-//		systick_Delay_ms(100);
-//	}
 
 
 
@@ -702,6 +676,7 @@ void separador_numero (uint16_t valor){
 
 
 void refresh (void){
+	siete_segmentos = contador;
 	separador_numero(siete_segmentos);
 			switch(caso_transistor){
 				case 0:{
@@ -729,10 +704,14 @@ void refresh (void){
 	}
 
 void reducir_tiempo(void){
-	contador --;
+	if(flag_conteo == 1){
+	contador -= 100;
 		if(contador == 0){
-			contador = 0;
+			contador = 6000;
 		}
+		flag_conteo = 0;
+	}
+
 }
 
 /* Funcion encargada de almacenar los valores de adc para el joystick, con esto switcheamos para que sea posible
@@ -945,7 +924,7 @@ uint8_t transformX(uint8_t x){
 	if(x%8 == 8%8){
 		return 7;
 	}
-
+	return 0;
 }
 
 
@@ -963,30 +942,6 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 
 
 
-void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr) {
-	char coord[8][128] = {0}; // 8 paginas (filas), 128 columnas
-
-		// Definir un laberinto estatico (1 = pared, 0 = camino)
-		// Cada byte representa 8 pixeles en una columna
-		for (int col = 0; col < 128; col++) {
-		    if (col % 16 == 0 || col % 16 == 15) {
-		        for (int page = 0; page < 8; page++) {
-		            coord[page][col] = 0xFF; // Paredes verticales
-		        }
-		    }
-		}
-
-		// Crear pasadizos
-		coord[1][0] = 0x00;   // Entrada
-		coord[6][127] = 0x00; // Salida
-
-		// Dibujar el laberinto en la OLED
-		for (int page = 0; page < 8; page++) {
-		    setPage(ptrHandlerI2Ctr, page);
-		    setColumnAddress(ptrHandlerI2Ctr, 0);
-		    sendDataBytes(ptrHandlerI2Ctr, coord[page], 128);
-		}
-	}
 
 
 
@@ -1199,8 +1154,8 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 	case STATE_MENSAJE:{
 
-
-
+		printf("\n");
+		printf("ms: %d\n", contador);
 
 
 		fsm_program.state = STATE_IDLE;
@@ -1218,7 +1173,7 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_TIEMPO:{
 		refresh();
-
+		reducir_tiempo();
 		if(flag_adc == 1){
 			lecturaXY();
 		}
@@ -1228,6 +1183,8 @@ FSM_STATES fsm_function(uint8_t evento){
 	}
 
 	case STATE_PANTALLA:{
+
+
 		fsm_program.state = STATE_IDLE;
 
 
@@ -1262,10 +1219,12 @@ FSM_STATES fsm_function(uint8_t evento){
 
 //sube la bandera del display
 void Timer2_Callback(void){
-	fsm_program.state = STATE_TIEMPO;
+
+	flag_conteo = 1;
 }
 
 void Timer3_Callback(void){
+
 	fsm_program.state = STATE_TIEMPO;
 }
 
@@ -1276,7 +1235,6 @@ void Timer3_Callback(void){
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
 	flag_adc = 1;
-	//drawPixel (&oled,50, 50);
 
 }
 

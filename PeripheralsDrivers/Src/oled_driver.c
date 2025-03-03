@@ -729,7 +729,7 @@ void drawMSG(I2C_Handler_t *ptrHandlerI2Ctr, char *msg) {
 			} else {
 				for (uint8_t j = 0; j < 8; j++) {
 					if (j <= 4) {
-						mensaje[i][j] = (letterTochar((msg + i)) + j);
+						mensaje[i][j] = *(letterTochar((msg + i)) + j);
 					} else {
 						mensaje[i][j] = 0;
 					}
@@ -778,8 +778,7 @@ void drawMSG(I2C_Handler_t *ptrHandlerI2Ctr, char *msg) {
 					if ((i == 15) && (*(msg + (i * n) + 1) != '\0')) {
 						for (uint8_t j = 0; j < 8; j++) {
 							if (j <= 4) {
-								mensaje[i][j] = (letterTochar((msgRenglon + i))
-										+ j);
+								mensaje[i][j] = *(letterTochar((msgRenglon + i))+ j);
 							} else {
 								mensaje[i][j] = 0;
 								mensaje[i][j + 1] = 0b00010000;
@@ -790,8 +789,7 @@ void drawMSG(I2C_Handler_t *ptrHandlerI2Ctr, char *msg) {
 					} else {
 						for (uint8_t j = 0; j < 8; j++) {
 							if (j <= 4) {
-								mensaje[i][j] = (letterTochar((msgRenglon + i))
-										+ j);
+								mensaje[i][j] = *(letterTochar((msgRenglon + i))+ j);
 							} else {
 								mensaje[i][j] = 0;
 							}
@@ -843,7 +841,7 @@ void drawSinglePageMSG(I2C_Handler_t *ptrHandlerI2Ctr, char *msg, uint8_t page) 
 		} else {
 			for (uint8_t j = 0; j < 8; j++) {
 				if (j <= 4) {
-					mensaje[i][j] = (letterTochar((msg + i)) + j);
+					mensaje[i][j] = *(letterTochar((msg + i)) + j);
 				} else {
 					mensaje[i][j] = 0;
 				}

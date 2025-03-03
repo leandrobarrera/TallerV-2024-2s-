@@ -9,4 +9,4 @@
 ../Src/oled_driver.c:160:6:toggleDisplay	16	static
 ../Src/oled_driver.c:170:7:letterTochar	16	static,ignoring_inline_asm
 ../Src/oled_driver.c:695:6:drawMSG	136	dynamic
-../Src/oled_driver.c:820:6:drawSinglePageMSG	80	dynamic
+../Src/oled_driver.c:818:6:drawSinglePageMSG	80	dynamic
