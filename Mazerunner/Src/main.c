@@ -53,7 +53,7 @@ uint8_t unidades = 0;			//variable para almacenar el dato de la unidad
 uint8_t decenas = 0;			//variable para almacenar el dato de la decena
 uint8_t centenas = 0;			//variable para almacenar el dato de la decena
 uint8_t millares = 0;			//variable para almacenar el dato de la decena
-uint8_t flag_adc = 0;			//bandera para el usart
+uint8_t flag_pj = 0;			//bandera para el usart
 //uint16_t contador = 0;			//variable para contar
 uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
 uint16_t valX = 0;				//valor adc del pinX
@@ -62,8 +62,12 @@ uint16_t adc_data = 0;			//data del adc
 int8_t posX = 3;				//posicion en X pantalla
 int8_t posY = 3;				//posicion en Y pantalla
 uint8_t flag_conteo = 0;
-volatile int contador = 6000;
+volatile int contador = 0;
 int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
+uint8_t mode = 0;
+uint8_t flag_lose = 0;
+uint8_t flag_maze = 0;
+uint8_t flag_menu = 0;
 
 //variables para USART6
 USART_Handler_t commSerial={0};
@@ -145,7 +149,8 @@ void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
 uint8_t ReadCoord(uint8_t x, uint8_t y);
 void drawMaze(void);
-
+void drawMenu(void);
+void drawLose(void);
 int main(void)
 {
 	init_system();								//Inicio de todas las configuraciones
@@ -155,7 +160,7 @@ int main(void)
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
 
 
-	drawMaze();
+	drawLose();
 
 
 
@@ -696,7 +701,7 @@ void refresh (void){
 				}
 				case 3:{
 					switcheo_transistor(caso_transistor);
-					caso_transistor = 0;
+					caso_transistor = 2;
 					break;
 				}
 
@@ -707,7 +712,30 @@ void reducir_tiempo(void){
 	if(flag_conteo == 1){
 	contador -= 100;
 		if(contador == 0){
-			contador = 6000;
+			switch(mode){
+			case 1:{
+				contador = 0;
+				posX = 3;
+				posY = 3;
+				break;
+			}
+			case 2:{
+				contador = 0;
+				posX = 3;
+				posY = 3;
+				break;
+			}
+			case 3:{
+				contador = 0;
+				posX = 3;
+				posY = 3;
+				break;
+			}
+			}
+			mode = 0;
+			clearScreen(&oled);
+			flag_lose = 1;
+			usart_writeMsg(&commSerial, "Perdiste, pero puedes volver a intentarlo seleccionando otra vez dicultad\n");
 		}
 		flag_conteo = 0;
 	}
@@ -750,7 +778,7 @@ void lecturaXY(void){
 	drawPixel2(&oled, posX, posY);
 
 
-	flag_adc = 0;
+	flag_pj = 0;
 
 
 }
@@ -930,13 +958,13 @@ uint8_t transformX(uint8_t x){
 
 
 void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
-	char emptyPage[128] = { 0 };  // Página vacía (todos los píxeles apagados)
+	memset(coord, 0, sizeof(coord));   // Página vacía (todos los píxeles apagados)
 
 	// Borrar todas las páginas de la pantalla
 	for (uint8_t page = 0; page < 8; page++) {
 		setPage(ptrHandlerI2Ctr, page);
 		setColumnAddress(ptrHandlerI2Ctr, 0); // Comenzar desde la primera columna
-		sendDataBytes(ptrHandlerI2Ctr, emptyPage, 128); // Enviar una página vacía
+		sendDataBytes(ptrHandlerI2Ctr, coord[page], 128); // Enviar una página vacía
 	}
 }
 
@@ -1137,10 +1165,268 @@ void drawMaze(void){
 }
 
 
-// apagar, configurar nuevamente, cambiar el canal. Pin de entrada
+void drawMenu(void){
+
+	//M
+	for(int i = 24 ; i>16 ; i--){
+		drawPixel2(&oled,i,30);
+		systick_Delay_ms(1);
+	}
+	for(int i = 31 ; i<34 ; i++){
+		drawPixel2(&oled,i-14,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 35 ; i<37 ; i++){
+		drawPixel2(&oled,54-i,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 17 ; i<25 ; i++){
+		drawPixel2(&oled,i,38);
+		systick_Delay_ms(1);
+	}
+
+	//A
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,40);
+		systick_Delay_ms(1);
+	}
+	for(int i = 41 ; i<44 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 17 ; i<25 ; i++){
+		drawPixel2(&oled,i,45);
+		systick_Delay_ms(1);
+	}
+
+	//Z
+	for(int i = 47 ; i<52 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+	systick_Delay_ms(1);
+	drawPixel2(&oled,18,51);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,23,48);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,21,49);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,22,49);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,19,50);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,20,50);
+	systick_Delay_ms(1);
+
+	//E
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,54);
+		systick_Delay_ms(1);
+	}
+	for(int i = 55 ; i<58 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//R
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,63);
+		systick_Delay_ms(1);
+	}
+	for(int i = 63 ; i<67 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+	}
+	drawPixel2(&oled,22,67);
+	systick_Delay_ms(1);
+	for(int i = 24 ; i>22 ; i--){
+		drawPixel2(&oled,i,68);
+		systick_Delay_ms(1);
+	}
+	for(int i = 20 ; i>17 ; i--){
+		drawPixel2(&oled,i,68);
+		systick_Delay_ms(1);
+	}
+
+	//U
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,70);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,75);
+		systick_Delay_ms(1);
+	}
+	for(int i = 72 ; i<75 ; i++){
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//N
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,77);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,82);
+		systick_Delay_ms(1);
+	}
+	for(int i = 78 ; i<81 ; i++){
+		drawPixel2(&oled,i-59,i);
+		systick_Delay_ms(1);
+	}
+
+	//N
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,84);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,89);
+		systick_Delay_ms(1);
+	}
+	for(int i = 84 ; i<89 ; i++){
+		drawPixel2(&oled,i-66,i);
+		systick_Delay_ms(1);
+	}
+
+	//E
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,91);
+		systick_Delay_ms(1);
+	}
+	for(int i = 92 ; i<95 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//R
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,97);
+		systick_Delay_ms(1);
+	}
+	for(int i = 98 ; i<101 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+	}
+	drawPixel2(&oled,22,101);
+	systick_Delay_ms(1);
+	for(int i = 24 ; i>22 ; i--){
+		drawPixel2(&oled,i,102);
+		systick_Delay_ms(1);
+	}
+	for(int i = 20 ; i>17 ; i--){
+		drawPixel2(&oled,i,102);
+		systick_Delay_ms(1);
+	}
+
+}
 
 
+void drawLose(void){
 
+	//Y
+	for(int i = 24 ; i>20 ; i--){
+		drawPixel2(&oled,i,50);
+		systick_Delay_ms(1);
+	}
+	drawPixel2(&oled,19,49);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,19,49);
+	systick_Delay_ms(1);
+	for(int i = 18 ; i>17 ; i--){
+		drawPixel2(&oled,i,48);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,52);
+		systick_Delay_ms(1);
+	}
+
+}
+
+
+void parseCommands(char *ptrBufferReception){
+    // Esta función de C lee la cadena de caracteres a la que apunta el "ptr" y  la divide
+    // y almacena en tres elementos diferentes: un string llamado "cmd" y dos numeros
+    // integer llamados ""firstParameter" y "SecondParameter".
+    // De esta forma, podemos introducir información al micro desde el puerto serial
+    sscanf(ptrBufferReception, "%s %lu %lu %s", cmd, &firstParameter, &secondParameter, userMsg);
+
+    // Este primer comando imprime una lista con los otros comandos que tiene el equipo
+    if (strcmp(cmd, "start") == 0){
+        usart_writeMsg(&commSerial, "Bienvenido a MAZERUNNER\n");
+        usart_writeMsg(&commSerial, "Se trata de un minijuego interactivo donde tendras que completar el laberinto\n");
+        usart_writeMsg(&commSerial, "en el menor tiempo posible, ¿seras tu el siguiente ganador?\n");
+        usart_writeMsg(&commSerial, "para iniciar elige la dificultad escribiendola ya sea facil, media, dificil\n");
+        usart_writeMsg(&commSerial, "(el nivel de dificultad varia en el tiempo que tienes disponible para completar el laberinto)\n");
+
+        flag_menu = 1;
+
+    }
+
+    // El comando dummy sirve para entender como funciona la recepción de números enviados
+    // desde la consola
+    else if (strcmp(cmd, "facil") == 0){
+        usart_writeMsg(&commSerial, "Iniciaras en  breve en la dificultad facil\n");
+        usart_writeMsg(&commSerial, "Ideal para aprender a jugar\n");
+		flag_maze = 1;
+		contador = 9000;
+		mode = 1;
+
+    }
+
+
+    else if (strcmp(cmd, "media")	== 0){
+        usart_writeMsg(&commSerial, "Iniciaras en  breve en la dificultad media\n");
+        usart_writeMsg(&commSerial, "Pon a prueba tus habilidades aprendidas\n");
+		flag_maze = 1;
+		contador = 6000;
+		mode = 2;
+
+
+	}
+
+
+    else if (strcmp(cmd, "dificil")==0){
+        usart_writeMsg(&commSerial, "Iniciaras en  breve en la dificultad dificil\n");
+        usart_writeMsg(&commSerial, "un verdadero defafio, estas list@?\n");
+		flag_maze = 1;
+		contador = 4500;
+		mode = 3;
+
+
+    }
+
+
+	 else{
+	        // Se imprime el mensaje "Wrong CMD" si la escritura no corresponde a los CMD implementados.
+	        usart_writeMsg(&commSerial, "Wrong CMD\n");
+	    }
+
+    }
+
+
+void analizeRecievedChar(void){
+	if(commSerial.receivedChar !='\0'){
+		bufferReception[counterReception] = commSerial.receivedChar;
+		counterReception++;
+
+		if (commSerial.receivedChar == '@'){
+			bufferReception[counterReception] = '\0';
+			counterReception = 0;
+			fsm_program.state = STATE_COMMAND_COMPLETE;
+		}
+	}
+}
 
 
 
@@ -1153,11 +1439,6 @@ FSM_STATES fsm_function(uint8_t evento){
 		break;
 	}
 	case STATE_MENSAJE:{
-
-		printf("   ░█▀▀▀░█▀▀▀░░█▀▀░▀▀█░░█░░░░ \n");
-		printf("░░░░█░▀█░█░▀█░░█▀▀░▄▀░░░▀░░░░\n");
-		printf("░░░░▀▀▀▀░▀▀▀▀░░▀▀▀░▀▀▀░░▀░░░░\n");
-
 
 
 
@@ -1176,9 +1457,23 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	case STATE_TIEMPO:{
 		refresh();
-		reducir_tiempo();
-		if(flag_adc == 1){
-			lecturaXY();
+		if(flag_menu){
+			clearScreen(&oled);
+			drawMenu();
+			flag_menu = 0;
+		}
+		if(flag_maze){
+			clearScreen(&oled);
+			drawMaze();
+			flag_maze = 0;
+		}
+		if(mode >=1 && mode <=3){
+
+			if(flag_pj == 1){
+				lecturaXY();
+			}
+			reducir_tiempo();
+
 		}
 
 		fsm_program.state = STATE_IDLE;
@@ -1195,10 +1490,25 @@ FSM_STATES fsm_function(uint8_t evento){
 
 	}
 
+	case STATE_CHAR_RECEIVED:{
+		fsm_program.state = STATE_IDLE;
+		analizeRecievedChar();
+			if(fsm_program.state == STATE_COMMAND_COMPLETE){
+				parseCommands(bufferReception);
+			}
+			fsm_program.state = STATE_IDLE;
+			break;
+
+	}
+
+	case STATE_COMMAND_COMPLETE:{
+
+	}
 		default: {
 		fsm_program.state = STATE_IDLE;
 		break;
 	}
+
 	}
 	return 	fsm_program.state;
 
@@ -1238,7 +1548,7 @@ void Timer3_Callback(void){
  Ademas de eso, agregamos la bandera para que se de la conversion de adc y la inicializacion de la variable sendMsg*/
 void Timer5_Callback(void){
 	gpio_TooglePin(&userLed);
-	flag_adc = 1;
+	flag_pj = 1;
 
 
 }
@@ -1252,7 +1562,7 @@ void adc_CompleteCallback (void){
 }
 
 void usart6_RxCallback(void){
-	fsm_program.state = STATE_MENSAJE;
+	fsm_program.state = STATE_CHAR_RECEIVED;
 	receivedChar = usart_getRxData(&commSerial);
 }
 
