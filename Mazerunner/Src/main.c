@@ -54,21 +54,23 @@ uint8_t decenas = 0;			//variable para almacenar el dato de la decena
 uint8_t centenas = 0;			//variable para almacenar el dato de la decena
 uint8_t millares = 0;			//variable para almacenar el dato de la decena
 uint8_t flag_pj = 0;			//bandera para el usart
-//uint16_t contador = 0;			//variable para contar
 uint8_t switcheo = 0; 			//variable para hacer switch de los transistores.
 uint16_t valX = 0;				//valor adc del pinX
 uint16_t valY = 0;				//valor adc del pinY
 uint16_t adc_data = 0;			//data del adc
-int8_t posX = 3;				//posicion en X pantalla
-int8_t posY = 3;				//posicion en Y pantalla
-uint8_t flag_conteo = 0;
-volatile int contador = 0;
-int conteo_ms = 0;		//variable para guardar el conteo de ms del systick
-uint8_t mode = 0;
-uint8_t flag_lose = 0;
-uint8_t flag_maze = 0;
-uint8_t flag_menu = 0;
-uint8_t flag_win = 0;
+int8_t posX = 3;				//posicion en X pantalla. En el inicio en este caso
+int8_t posY = 3;				//posicion en Y pantalla. En el inicio en este caso
+uint8_t flag_conteo = 0;		//flag para el timer
+volatile int contador = 0;		//variable para contar
+int conteo_ms = 0;				//variable para guardar el conteo de ms del systick
+uint8_t mode = 0;				//modos de dificultad puestos en USART.
+uint8_t flag_lose = 0;			//flag para activar la derrota
+uint8_t flag_maze = 0;			//flag para dibujar maze
+uint8_t flag_menu = 0;			//flag para dibujar menu
+uint8_t flag_win = 0;			//flag para activar la victoria
+
+//¿como se relacionan valX y posX?
+//ValX se lee, y aumenta posX.
 
 //variables para USART6
 USART_Handler_t commSerial={0};
@@ -101,8 +103,8 @@ GPIO_Handler_t switcheoMillares= {0};  // PinC5
 ADC_Config_t joystick = {0};  //		Channel0: PinA0
 
 
-char coord[8][128] = {0};
-uint8_t maze_matrix[64][128] = {0}; // Debes llenar esta matriz con los datos procesados de la imagen
+char coord[8][128] = {0};			//arreglo, lo que representa la matriz del OLED.
+
 
 //Handlers para los timers
 
@@ -132,20 +134,20 @@ fsm_states_t fsm_program  = {0};
 
 
 
-void init_system(void);							//funcion para iniciar las configuraciones
-extern void configMagic(void);					//se importa la funcion magic desde el main.h
-FSM_STATES fsm_function(uint8_t evento);		//maquina de estados finita
-void lecturaXY(void);							//funcion para la lectura de los datos de adc en X y X
-void procesar_coordenadas (void);				//funcion para el procesamiento de la lectura
-void display_numbers(uint8_t valor);			//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
-void switcheo_transistor (uint8_t choose);		//funcion para encender los transistores y hacer el switcheo respectivo
-void separador_numero (uint16_t valor);			//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
-void refresh (void);							//funcion para el constante refresco de el display
-void reducir_tiempo(void);						//funcion para contar hacia atras cada 1 seg
+void init_system(void);													//funcion para iniciar las configuraciones
+extern void configMagic(void);											//se importa la funcion magic desde el main.h
+FSM_STATES fsm_function(uint8_t evento);								//maquina de estados finita
+void lecturaXY(void);													//funcion para la lectura de los datos de adc en X y X
+void procesar_coordenadas (void);										//funcion para el procesamiento de la lectura
+void display_numbers(uint8_t valor);									//funcion para que se pinten los numeros, se enciendan los displays, se apaguen, etc.
+void switcheo_transistor (uint8_t choose);								//funcion para encender los transistores y hacer el switcheo respectivo
+void separador_numero (uint16_t valor);									//funcion para la creacion del numero como tal, ya que no usamos el mismo esquema de la tarea pasada, ahora usamos una funcion que genera los numeros que vamos a pintar en el display.
+void refresh (void);													//funcion para el constante refresco de el display
+void reducir_tiempo(void);												//funcion para contar hacia atras cada 1 seg
 void animateRandomSquares(I2C_Handler_t *ptrHandlerI2Ctr);
-void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);
-void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);
-void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
+void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr);						//funcion para limpiar pantalla. Pone el arreglo global en 0, todos sus elementos.
+void drawLineOnPage6(I2C_Handler_t *ptrHandlerI2Ctr);					//funcion de prueba
+void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);	//dibuja pixel en una coord especifica,
 void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y);
 uint8_t transformX(uint8_t x);
 uint8_t ReadCoord(uint8_t x, uint8_t y);
@@ -744,30 +746,33 @@ void reducir_tiempo(void){
 
 void lecturaXY(void){
 
+	//para borrar la posicion que tenemos que anteriormente, este paso es IMPORTANTE, ya que con ello podemos movernos dibujando sin dejar rastro. Borra un punto y dibuja el siguiente.
 	clearPixel2(&oled, posX, posY);
 
-
+//se empieza conversion de ADC
 	adc_StartSingleConv();
 	systick_Delay_ms(10);
+	//metemos el valor del ADC en ValX, que se procesa en otra funcion
 	valX = adc_GetValue();
 	systick_Delay_ms(5);
 
-
+//se switchea los transistores, apagamos el X porque ya tenemos el valor de X y se enciende el Y.
 	gpio_WritePin(&pinX, 0);
 	gpio_WritePin(&pinY, 1);
 	systick_Delay_ms(5);
 
-
+//aqui se empieza la nueva conversion
 	adc_StartSingleConv();
 	systick_Delay_ms(10);
 	valY = adc_GetValue();
 	systick_Delay_ms(5);
 
-
+//aqui lo vuelve a dejar en X. Esto es ciclico. Recordar que esta en la FSM.
 	gpio_WritePin(&pinX, 1);
 	gpio_WritePin(&pinY, 0);
 	systick_Delay_ms(5);
 
+	//
 	procesar_coordenadas();
 
 	drawPixel2(&oled, posX, posY);
@@ -784,8 +789,14 @@ void lecturaXY(void){
 
 void procesar_coordenadas(void){
 
+	//si ponemos el joystick hacia abajo. X aumenta hacia abajo.
+
+	//ValX se lee, este rango es el aceptable para moverlo hacia abajo.
 	if(valX > 3500 && valX < 3900){
+		//si este if se cumple esta en borde. Es decir que si posX es 64 se sale de la pantalla, por tanto no hay dibujo.
 		if(posX <= 63){
+			//si la siguiente posicion es 1, no se hace nada, no se avanza. Recordar que ReadCoord recibe x,y pero devuelve 1 o 0.
+			//X+1 es el siguiente movimiento, y si es 0 es porque no hay nada, por lo cual se puede avanzar.
 			if(ReadCoord(posX+1, posY) == 0){
 				posX = posX +1;
 			}
@@ -811,6 +822,7 @@ void procesar_coordenadas(void){
 
 	}
 
+	//Y aumenta hacia la derecha.
 	if(valY > 0 && valY < 2500){
 		if(posY <= 127){
 			if(ReadCoord(posX, posY+1) == 0){
@@ -819,6 +831,8 @@ void procesar_coordenadas(void){
 		}
 
 	}
+
+	//si llegas a la posicion ganadora. Detectamos si llego a la meta.
 
 	if(posX == 63 && posY >= 120 && posY <= 128){
 
@@ -834,9 +848,23 @@ void procesar_coordenadas(void){
 
 void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
 
+	/*se recibe el handler del OLED y coordenadas X y Y donde se quiere poner el pixel.
+	 *
+	 * 1) el if, ver si esta entre 1 y 8 la coordenada X para saber en que pagina colocarse
+	 * 2)
+
+*/
+
+	//mayor igual que 1 menor que igual que 8.
 	if(x >= 1 && x <= 8){
+
+		//transform saca el residuo del valor de X
 		uint8_t auxpage1 = coord[0][y] |= (1 << transformX(x));
-		coord[0][y] = auxpage1;
+
+		//entonces tengo la primera pagina. Las paginas van en vertical y las variables Y en horizontal.
+		//aqui TransformX(x) me sirve para shiftear X veces donde se requiere dibujar. Se shiftea 1 porque es lo que ENCIENDE la pantalla.
+		//esto tambien se hizo porque ayuda a escoger especificamente el bit de esa pagina, cada pagina tiene 8 bits = 1 byte.
+		coord[0][y] = auxpage1; //¿por que se hizo asi? a STM no le gustaba, era warning.
 	}
 	if(x > 8 && x <= 16){
 		uint8_t auxpage1 = coord[1][y] |= (1 << transformX(x));
@@ -868,6 +896,7 @@ void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
 	}
 
 	    // coordenadas
+		// cuando se pone el numero X en el arreglo, se ajusta el arreglo con lo obtenido.
 	    for (int page = 0; page < 8; page++) {
 	        setPage(ptrHandlerI2Ctr, page);
 	        setColumnAddress(ptrHandlerI2Ctr, 0);
@@ -876,6 +905,8 @@ void drawPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
 }
 
 void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
+
+	//lo mismo para borrar, recordemos que &= ~ pone 0, and negado.
     if(x >= 1 && x <= 8){
         uint8_t auxpage1 = coord[0][y] &= ~(1 << transformX(x));
         coord[0][y] = auxpage1;
@@ -919,11 +950,17 @@ void clearPixel2(I2C_Handler_t *ptrHandlerI2Ctr, uint8_t x, uint8_t y) {
 
 uint8_t ReadCoord(uint8_t x, uint8_t y){
 
-	uint8_t page = x/8;
+	//lee en el arreglo, si hay un 0 o un 1 en la pantalla (si la pantalla tiene el pixel ON u OFF)
 
+	//pone la pagina en la que estamos posicionados
+	uint8_t page = x/8;
+	//ponemos el bit especifico en el que estamos
 	uint8_t bit_position = x%8;
 
+	//guardamos el byte en una variable.
 	uint8_t byte = coord[page][y];
+
+	//byte se shiftea bit position, y en ese bit se lee si hay un 1 o 0 con el operador logico &.
 	uint8_t bit_value = (byte >> bit_position) & 1;
 
 	return bit_value;
@@ -931,6 +968,8 @@ uint8_t ReadCoord(uint8_t x, uint8_t y){
 }
 
 uint8_t transformX(uint8_t x){
+
+	//cogemos X, sacamos el residuo y luego con ese residuo indica en que posicion de la pagina ESPECIFICAMENTE estamos, porque son 8 bits por pagina.
 
 	if(x%8 == 1%8){
 		return 0;
@@ -962,7 +1001,7 @@ uint8_t transformX(uint8_t x){
 
 
 void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
-	memset(coord, 0, sizeof(coord));   // Página vacía (todos los píxeles apagados)
+	memset(coord, 0, sizeof(coord));   // Página vacía (todos los píxeles apagados). mem viene de una importacion de STM, y pone todo en 0
 
 	// Borrar todas las páginas de la pantalla
 	for (uint8_t page = 0; page < 8; page++) {
@@ -980,6 +1019,9 @@ void clearScreen(I2C_Handler_t *ptrHandlerI2Ctr) {
 void drawMaze(void){
 
 	//Bordes
+	//en este ciclo for, empezamos en i= 10 y vamos hasta i= 127, y dibujamos pixel por pixel.
+	//¿por que se pone delay? para evitar errores en el I2C, se disminuyen errores en la transmision de I2C, si se hace al tiempo
+	//y con tanta rapidez es posible que el programa se pare.
 	for(int i = 10 ; i<128 ; i++){
 		drawPixel2(&oled,1,i);
 		systick_Delay_ms(2);
@@ -998,7 +1040,7 @@ void drawMaze(void){
 	}
 
 	//Horizontales
-	//X10
+	//X10. Aqui estan todas las lineas horizontales que estan en el X = 10. Es decir la pagina 1.
 	for(int i = 10 ; i<30 ; i++){
 		drawPixel2(&oled,10,i);
 		systick_Delay_ms(2);
@@ -1176,6 +1218,7 @@ void drawMenu(void){
 		drawPixel2(&oled,i,30);
 		systick_Delay_ms(1);
 	}
+	//diagonal.
 	for(int i = 31 ; i<34 ; i++){
 		drawPixel2(&oled,i-14,i);
 		systick_Delay_ms(1);
@@ -1671,11 +1714,14 @@ FSM_STATES fsm_function(uint8_t evento){
 			drawMaze();
 			flag_maze = 0;
 		}
-		if(mode >=1 && mode <=3){
 
+		//funcion para detectar si se esta jugando. Como el timer siempre se esta ejecuntando, se podria decir que ese es el modo 0, y se entra a jugar al poner alguno.
+		if(mode >=1 && mode <=3){
+			//flag para activar el pj.
 			if(flag_pj == 1){
 				lecturaXY();
 			}
+			//se empieza a contar tiempo
 			reducir_tiempo();
 
 		}
