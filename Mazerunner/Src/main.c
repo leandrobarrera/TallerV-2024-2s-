@@ -68,6 +68,7 @@ uint8_t mode = 0;
 uint8_t flag_lose = 0;
 uint8_t flag_maze = 0;
 uint8_t flag_menu = 0;
+uint8_t flag_win = 0;
 
 //variables para USART6
 USART_Handler_t commSerial={0};
@@ -151,6 +152,7 @@ uint8_t ReadCoord(uint8_t x, uint8_t y);
 void drawMaze(void);
 void drawMenu(void);
 void drawLose(void);
+void drawWin(void);
 int main(void)
 {
 	init_system();								//Inicio de todas las configuraciones
@@ -158,13 +160,6 @@ int main(void)
 	clearDisplay(&oled);
 	configMagic();								//Configuracion del Magic
 	config_SysTick_ms(HSI_CLOCK_CONFIGURED); 	//Configurando el Systick
-
-
-	drawLose();
-
-
-
-
 
 
 
@@ -824,6 +819,15 @@ void procesar_coordenadas(void){
 		}
 
 	}
+
+	if(posX == 63 && posY >= 120 && posY <= 128){
+
+		flag_win = 1;
+		mode = 0;
+		posX = 3;
+		posY = 3;
+
+	}
 }
 
 
@@ -1340,16 +1344,206 @@ void drawLose(void){
 		drawPixel2(&oled,i,50);
 		systick_Delay_ms(1);
 	}
-	drawPixel2(&oled,19,49);
+	drawPixel2(&oled,20,49);
 	systick_Delay_ms(1);
-	drawPixel2(&oled,19,49);
+	drawPixel2(&oled,20,49);
 	systick_Delay_ms(1);
-	for(int i = 18 ; i>17 ; i--){
+	for(int i = 19 ; i>17 ; i--){
 		drawPixel2(&oled,i,48);
 		systick_Delay_ms(1);
 		drawPixel2(&oled,i,52);
 		systick_Delay_ms(1);
 	}
+
+	//O
+	for(int i = 23 ; i>17 ; i--){
+		drawPixel2(&oled,i,54);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,58);
+		systick_Delay_ms(1);
+	}
+	for(int i = 55 ; i<57 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//U
+	for(int i = 61 ; i<63 ; i++){
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 23 ; i>17 ; i--){
+		drawPixel2(&oled,i,60);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,64);
+		systick_Delay_ms(1);
+	}
+
+	//L
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,68);
+		systick_Delay_ms(1);
+
+	}
+	for(int i = 69 ; i<72 ; i++){
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//O
+	for(int i = 23 ; i>17 ; i--){
+		drawPixel2(&oled,i,73);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,77);
+		systick_Delay_ms(1);
+	}
+	for(int i = 74 ; i<76 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//S
+	for(int i = 79 ; i<83 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 20 ; i>17 ; i--){
+		drawPixel2(&oled,i,79);
+		systick_Delay_ms(1);
+	}
+	for(int i = 24 ; i>21 ; i--){
+		drawPixel2(&oled,i,83);
+		systick_Delay_ms(1);
+	}
+
+	//E
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,85);
+		systick_Delay_ms(1);
+	}
+	for(int i = 86 ; i<89 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,21,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+
+}
+
+
+void drawWin(void){
+
+	//Y
+	for(int i = 24 ; i>20 ; i--){
+		drawPixel2(&oled,i,50);
+		systick_Delay_ms(1);
+	}
+	drawPixel2(&oled,20,49);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,20,49);
+	systick_Delay_ms(1);
+	for(int i = 19 ; i>17 ; i--){
+		drawPixel2(&oled,i,48);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,52);
+		systick_Delay_ms(1);
+	}
+
+	//O
+	for(int i = 23 ; i>17 ; i--){
+		drawPixel2(&oled,i,54);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,58);
+		systick_Delay_ms(1);
+	}
+	for(int i = 55 ; i<57 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+
+	//U
+	for(int i = 61 ; i<63 ; i++){
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 23 ; i>17 ; i--){
+		drawPixel2(&oled,i,60);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,64);
+		systick_Delay_ms(1);
+	}
+
+	//W
+	for(int i = 22 ; i>20 ; i--){
+		drawPixel2(&oled,i,69);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,73);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,75);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,79);
+		systick_Delay_ms(1);
+	}
+	for(int i = 19 ; i>17 ; i--){
+		drawPixel2(&oled,i,68);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,74);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,80);
+		systick_Delay_ms(1);
+	}
+	drawPixel2(&oled,23,70);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,23,72);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,23,76);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,23,78);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,24,71);
+	systick_Delay_ms(1);
+	drawPixel2(&oled,24,77);
+	systick_Delay_ms(1);
+
+	//I
+	for(int i = 82 ; i<87 ; i++){
+		drawPixel2(&oled,17,i);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,24,i);
+		systick_Delay_ms(1);
+	}
+	for(int i = 23 ; i>16 ; i--){
+		drawPixel2(&oled,i,84);
+		systick_Delay_ms(1);
+	}
+
+	//N
+	for(int i = 24 ; i>17 ; i--){
+		drawPixel2(&oled,i,88);
+		systick_Delay_ms(1);
+		drawPixel2(&oled,i,93);
+		systick_Delay_ms(1);
+	}
+	for(int i = 89 ; i<92 ; i++){
+		drawPixel2(&oled,i-71,i);
+		systick_Delay_ms(1);
+	}
+
+
+
 
 }
 
@@ -1461,6 +1655,16 @@ FSM_STATES fsm_function(uint8_t evento){
 			clearScreen(&oled);
 			drawMenu();
 			flag_menu = 0;
+		}
+		if(flag_lose){
+			clearScreen(&oled);
+			drawLose();
+			flag_lose = 0;
+		}
+		if(flag_win){
+			clearScreen(&oled);
+			drawWin();
+			flag_win = 0;
 		}
 		if(flag_maze){
 			clearScreen(&oled);
